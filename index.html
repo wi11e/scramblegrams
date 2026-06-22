@@ -21,6 +21,9 @@
     </div>
     <div class="start-sub-row">
       <p class="start-sub">Build words, score points</p>
+    </div>
+    <div>
+      <button id="how-to-play-btn" aria-label="How to play">?</button>
       <button id="lb-icon-btn" aria-label="Leaderboard">
         <svg width="22" height="18" viewBox="0 0 22 18" fill="currentColor">
           <rect x="0" y="6"  width="6" height="12" rx="1.5"/>
@@ -33,17 +36,12 @@
     <fieldset class="mode-group">
       <legend>Game mode</legend>
       <label class="mode-card">
-        <input type="radio" name="mode" value="classical" checked>
-        <span class="mode-card-name">Classical</span>
-        <span class="mode-card-desc">Count-up · Play until done</span>
-      </label>
-      <label class="mode-card">
         <input type="radio" name="mode" value="bullet">
         <span class="mode-card-name">Bullet</span>
         <span class="mode-card-desc">1 minute</span>
       </label>
       <label class="mode-card">
-        <input type="radio" name="mode" value="blitz">
+        <input type="radio" name="mode" value="blitz" checked>
         <span class="mode-card-name">Blitz</span>
         <span class="mode-card-desc">3 minutes</span>
       </label>
@@ -51,6 +49,11 @@
         <input type="radio" name="mode" value="rapid">
         <span class="mode-card-name">Rapid</span>
         <span class="mode-card-desc">10 minutes</span>
+      </label>
+      <label class="mode-card">
+        <input type="radio" name="mode" value="classical">
+        <span class="mode-card-name">Classical</span>
+        <span class="mode-card-desc">Count-up · Play until done</span>
       </label>
     </fieldset>
 
@@ -108,10 +111,6 @@
     <div id="bottom-panel">
       <bg-tile-rack id="tile-rack"></bg-tile-rack>
       <sg-tray id="tray"></sg-tray>
-      <div id="bottom-actions">
-        <button id="draw-btn">Draw</button>
-        <button id="done-btn">Finish</button>
-      </div>
       <p id="status-msg" class="status-msg"></p>
     </div>
   </div>
@@ -127,6 +126,166 @@
     <button id="share-btn" class="btn-secondary">Share score</button>
     <button id="play-again-btn" class="btn-primary">Play again</button>
   </div>
+
+  <!-- ── Retire confirm ───────────────────────────────────────────────────── -->
+  <div id="retire-modal" hidden>
+    <div class="retire-card">
+      <p class="retire-question">Retire this game?</p>
+      <div class="retire-actions">
+        <button id="retire-no"  class="retire-btn retire-btn-no">No</button>
+        <button id="retire-yes" class="retire-btn retire-btn-yes">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tour modal ────────────────────────────────────────────────────────── -->
+  <div id="tour-modal" hidden>
+    <div class="tour-card">
+
+      <div class="tour-card-header">
+        <button id="tour-close" class="tour-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="tour-slides-wrap">
+
+        <!-- Slide 1: Welcome -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-tiles">
+              <span class="tour-tile claimed">W</span><span class="tour-tile claimed">O</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">D</span><span class="tour-tile claimed">S</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Scramblegrams</h3>
+          <p class="tour-body">Draw letter tiles, build words, and score points. The longer the word, the more it's worth.</p>
+        </div>
+
+        <!-- Slide 2: Draw tiles -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <p class="tour-label">POOL</p>
+            <div class="tour-tiles">
+              <span class="tour-tile">D</span><span class="tour-tile">R</span><span class="tour-tile">A</span><span class="tour-tile">W</span><span class="tour-tile tour-tile-new">S</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Your pool</h3>
+          <p class="tour-body">Tiles fill your pool automatically as you play. You always have up to 10 tiles to work with.</p>
+        </div>
+
+        <!-- Slide 3: Claim a word -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-tiles">
+              <span class="tour-tile">D</span><span class="tour-tile">R</span><span class="tour-tile">A</span><span class="tour-tile">W</span><span class="tour-tile">S</span>
+            </div>
+            <div class="tour-arrow">↓</div>
+            <div class="tour-tiles">
+              <span class="tour-tile claimed">D</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">W</span><span class="tour-tile claimed">S</span>
+              <span class="tour-pts">+3</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Claim a word</h3>
+          <p class="tour-body">Tap tiles from your pool into the tray, spell a valid word of 4 or more letters, and claim it.</p>
+        </div>
+
+        <!-- Slide 4: Extend a word -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-row">
+              <div class="tour-tiles">
+                <span class="tour-tile from-word">D</span><span class="tour-tile from-word">R</span><span class="tour-tile from-word">A</span><span class="tour-tile from-word">W</span>
+              </div>
+              <span class="tour-plus">+</span>
+              <div class="tour-tiles">
+                <span class="tour-tile">I</span><span class="tour-tile">N</span><span class="tour-tile">G</span>
+              </div>
+            </div>
+            <div class="tour-arrow">↓</div>
+            <div class="tour-tiles">
+              <span class="tour-tile claimed">D</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">W</span><span class="tour-tile claimed">I</span><span class="tour-tile claimed">N</span><span class="tour-tile claimed">G</span>
+              <span class="tour-pts">+5</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Extend a word</h3>
+          <p class="tour-body">Tap a claimed word into the tray, add new tiles from your pool, and claim a longer word in its place.</p>
+        </div>
+
+        <!-- Slide 5: Recombine -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-row">
+              <div class="tour-tiles">
+                <span class="tour-tile from-word">O</span><span class="tour-tile from-word">V</span><span class="tour-tile from-word">E</span><span class="tour-tile from-word">R</span>
+              </div>
+              <span class="tour-plus">+</span>
+              <div class="tour-tiles">
+                <span class="tour-tile from-word">C</span><span class="tour-tile from-word">A</span><span class="tour-tile from-word">S</span><span class="tour-tile from-word">T</span>
+              </div>
+            </div>
+            <div class="tour-arrow">↓</div>
+            <div class="tour-tiles">
+              <span class="tour-tile claimed">O</span><span class="tour-tile claimed">V</span><span class="tour-tile claimed">E</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">C</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">S</span><span class="tour-tile claimed">T</span>
+              <span class="tour-pts">+6</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Recombine words</h3>
+          <p class="tour-body">Tap two or more claimed words into the tray and merge them into one new word. All source letters must be used.</p>
+        </div>
+
+        <!-- Slide 6: Scoring -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-score-row">
+              <div class="tour-tiles">
+                <span class="tour-tile claimed">D</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">W</span>
+              </div>
+              <span class="tour-pts">+2</span>
+            </div>
+            <div class="tour-score-row">
+              <div class="tour-tiles">
+                <span class="tour-tile claimed">D</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">W</span><span class="tour-tile claimed">S</span>
+              </div>
+              <span class="tour-pts">+3</span>
+            </div>
+            <div class="tour-score-row">
+              <div class="tour-tiles">
+                <span class="tour-tile claimed">D</span><span class="tour-tile claimed">R</span><span class="tour-tile claimed">A</span><span class="tour-tile claimed">W</span><span class="tour-tile claimed">I</span><span class="tour-tile claimed">N</span><span class="tour-tile claimed">G</span>
+              </div>
+              <span class="tour-pts">+5</span>
+            </div>
+          </div>
+          <h3 class="tour-title">Scoring</h3>
+          <p class="tour-body">Each word scores its length minus 2. Extend and recombine to keep growing your total.</p>
+        </div>
+
+        <!-- Slide 7: Modes -->
+        <div class="tour-slide" hidden>
+          <div class="tour-visual">
+            <div class="tour-modes">
+              <div class="tour-mode"><span class="tour-mode-name">Classical</span><span class="tour-mode-desc">Count-up · no limit</span></div>
+              <div class="tour-mode"><span class="tour-mode-name">Bullet</span><span class="tour-mode-desc">1 minute</span></div>
+              <div class="tour-mode tour-mode-highlight"><span class="tour-mode-name">Blitz</span><span class="tour-mode-desc">3 minutes</span></div>
+              <div class="tour-mode"><span class="tour-mode-name">Rapid</span><span class="tour-mode-desc">10 minutes</span></div>
+            </div>
+          </div>
+          <h3 class="tour-title">Pick your mode</h3>
+          <p class="tour-body">Classical counts up — play at your own pace. Timed modes end when the clock hits zero.</p>
+        </div>
+
+      </div><!-- /tour-slides-wrap -->
+
+      <div class="tour-footer">
+        <button id="tour-prev" class="tour-nav-btn">←</button>
+        <div class="tour-dots">
+          <span class="tour-dot"></span><span class="tour-dot"></span><span class="tour-dot"></span><span class="tour-dot"></span><span class="tour-dot"></span><span class="tour-dot"></span><span class="tour-dot"></span>
+        </div>
+        <div class="tour-footer-right">
+          <button id="tour-next" class="tour-nav-btn">→</button>
+          <button id="tour-got-it" class="tour-got-it" hidden>Got it</button>
+        </div>
+      </div>
+
+    </div><!-- /tour-card -->
+  </div><!-- /tour-modal -->
 
 </div>
 

@@ -15,7 +15,7 @@ class BgTileRack extends HTMLElement {
 
     const label = document.createElement('div');
     label.className = 'rack-label';
-    label.textContent = `Unclaimed  ${tiles.length} / ${cap}`;
+    label.textContent = `Pool  ${tiles.length} / ${cap}`;
     this.appendChild(label);
 
     const row = document.createElement('div');
@@ -95,7 +95,7 @@ class BgWordBoard extends HTMLElement {
     if (words.length === 0) {
       const msg = document.createElement('p');
       msg.className = 'board-empty';
-      msg.textContent = 'Tap unclaimed tiles to build your first word';
+      msg.textContent = 'Tap tiles from your pool to build your first word';
       this.appendChild(msg);
       return;
     }
@@ -110,33 +110,50 @@ class BgWordBoard extends HTMLElement {
 }
 customElements.define('bg-word-board', BgWordBoard);
 
-// bg-game-header — score / timer / bag count
+// bg-game-header — score / timer / bag count + retire button
 class BgGameHeader extends HTMLElement {
-  update({ score, seconds, bagCount, mode }) {
-    const mins = Math.floor(Math.abs(seconds) / 60);
-    const secs = Math.abs(seconds) % 60;
-    const time = `${mins}:${String(secs).padStart(2, '0')}`;
-    const urgent = mode !== 'classical' && seconds <= 30;
-
+  connectedCallback() {
     this.innerHTML = `
       <div class="header-top">
         <span class="header-title">SCRAMBLEGRAMS</span>
       </div>
       <div class="header-stats">
         <div class="stat">
-          <span class="stat-val">${score}</span>
+          <span class="stat-val" data-h="score">0</span>
           <span class="stat-lbl">Score</span>
         </div>
         <div class="stat">
-          <span class="stat-val">${bagCount}</span>
+          <span class="stat-val" data-h="bag">—</span>
           <span class="stat-lbl">In bag</span>
         </div>
-        <div class="stat ${urgent ? 'urgent' : ''}">
-          <span class="stat-val">${time}</span>
-          <span class="stat-lbl">${mode === 'classical' ? 'Elapsed' : 'Left'}</span>
+        <div class="stat" data-h="timer-wrap">
+          <span class="stat-val" data-h="time">0:00</span>
+          <span class="stat-lbl" data-h="time-lbl">Elapsed</span>
         </div>
+        <button class="header-retire-btn" aria-label="Retire game">
+          <svg width="13" height="15" viewBox="0 0 13 15" fill="currentColor" aria-hidden="true">
+            <rect x="2" y="0" width="1.5" height="15" rx="0.75"/>
+            <path d="M3.5 1.5L12 5L3.5 8.5Z"/>
+          </svg>
+        </button>
       </div>
     `;
+    this.querySelector('.header-retire-btn').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('retire-click', { bubbles: true }));
+    });
+  }
+
+  update({ score, seconds, bagCount, mode }) {
+    const mins = Math.floor(Math.abs(seconds) / 60);
+    const secs = Math.abs(seconds) % 60;
+    const time = `${mins}:${String(secs).padStart(2, '0')}`;
+    const urgent = mode !== 'classical' && seconds <= 30;
+
+    this.querySelector('[data-h="score"]').textContent    = score;
+    this.querySelector('[data-h="bag"]').textContent      = bagCount;
+    this.querySelector('[data-h="time"]').textContent     = time;
+    this.querySelector('[data-h="time-lbl"]').textContent = mode === 'classical' ? 'Elapsed' : 'Left';
+    this.querySelector('[data-h="timer-wrap"]').classList.toggle('urgent', urgent);
   }
 }
 customElements.define('bg-game-header', BgGameHeader);

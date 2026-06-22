@@ -71,7 +71,7 @@ export class ScramblergramsGame {
     if (!isValidWord(word)) return { error: `"${word}" isn't in the Scrabble dictionary` };
 
     const next = this._take(letters);
-    if (!next) return { error: 'Those letters aren\'t all in your unclaimed area' };
+    if (!next) return { error: 'Those letters aren\'t all in your pool' };
 
     this.unclaimed = next;
     const w = { id: makeWordId(), letters, text: word };
@@ -94,7 +94,7 @@ export class ScramblergramsGame {
     if (extras.length === 0) return { error: 'Must add at least one new tile — use Anagram to rearrange only' };
 
     const next = this._take(extras);
-    if (!next) return { error: `Need ${extras.join(', ')} from unclaimed area` };
+    if (!next) return { error: `Need ${extras.join(', ')} from your pool` };
 
     this.unclaimed = next;
     existing.letters = letters;
@@ -135,7 +135,7 @@ export class ScramblergramsGame {
     if (extras === null) return { error: 'New word must contain all letters from the selected words' };
 
     const next = extras.length > 0 ? this._take(extras) : [...this.unclaimed];
-    if (!next) return { error: `Need ${extras.join(', ')} from unclaimed area` };
+    if (!next) return { error: `Need ${extras.join(', ')} from your pool` };
 
     this.words = this.words.filter(w => !wordIds.includes(w.id));
     this.unclaimed = next;

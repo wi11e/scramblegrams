@@ -19,8 +19,6 @@ const header    = $('header');
 const wordBoard = $('word-board');
 const tileRack  = $('tile-rack');
 const trayEl    = $('tray');
-const drawBtn   = $('draw-btn');
-const doneBtn   = $('done-btn');
 const statusEl  = $('status-msg');
 const startBtn  = $('start-btn');
 const shareBtn  = $('share-btn');
@@ -59,12 +57,16 @@ async function boot() {
     show('game');
     startTimer(saved.mode);
     render();
+    autoFill();
   }
 
   startBtn.addEventListener('click', onStartClick);
-  drawBtn.addEventListener('click', onDraw);
-  doneBtn.addEventListener('click', onDone);
   shareBtn.addEventListener('click', onShare);
+
+  // Retire modal
+  header.addEventListener('retire-click', () => { $('retire-modal').hidden = false; });
+  $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
+  $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
   $('play-again-btn').addEventListener('click', () => { clearSavedState(); location.reload(); });
   $('lb-result-btn').addEventListener('click', () => showLeaderboard(game?.mode ?? 'classical'));
 
@@ -82,6 +84,8 @@ async function boot() {
 
   // Leaderboard icon on start screen
   $('lb-icon-btn').addEventListener('click', () => showLeaderboard('classical'));
+
+  initTour();
 
   // Profile screen
   $('profile-back').addEventListener('click', () => show('start'));
@@ -123,7 +127,7 @@ function startGame() {
   show('game');
   startTimer(mode);
   render();
-  drawBtn.focus();
+  autoFill();
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
@@ -213,6 +217,7 @@ function onClaim() {
     wordIdsInTray.clear();
     render();
     saveState();
+    autoFill(150);
     // Scroll so the newly added word is visible
     requestAnimationFrame(() => {
       const body = document.getElementById('game-body');
@@ -225,15 +230,21 @@ function onClaim() {
   }
 }
 
-// ── Draw / Done ───────────────────────────────────────────────────────────────
+// ── Auto-fill ─────────────────────────────────────────────────────────────────
 
-function onDraw() {
-  const r = game.draw();
-  if (r.error) { flash(r.error, 'error'); return; }
-  flash('', '');
-  render();
-  saveState();
+function autoFill(initialDelay = 0) {
+  clearTimeout(fillTimer);
+  const step = () => {
+    if (!game?.canDraw()) return;
+    game.draw();
+    render();
+    saveState();
+    if (game.canDraw()) fillTimer = setTimeout(step, 120);
+  };
+  fillTimer = setTimeout(step, initialDelay);
 }
+
+// ── Done ──────────────────────────────────────────────────────────────────────
 
 function onDone() {
   clearInterval(timerInterval);
@@ -295,7 +306,6 @@ function render() {
   renderWordBoard();
   renderRack();
   renderTray();
-  updateDrawButton();
 }
 
 function renderHeader() {
@@ -321,13 +331,6 @@ function renderTray() {
   trayEl.setTiles(tray, valid);
 }
 
-function updateDrawButton() {
-  drawBtn.disabled = !game.canDraw();
-  drawBtn.textContent = game.bag.length === 0
-    ? 'Bag empty'
-    : `New letter  (${game.bag.length})`;
-}
-
 function flash(msg, type) {
   statusEl.textContent = msg;
   statusEl.className   = `status-msg ${type}`;
@@ -336,6 +339,10 @@ function flash(msg, type) {
 // ── Persistence ───────────────────────────────────────────────────────────────
 
 const SAVE_KEY = 'sg-state';
+const TOUR_KEY = 'sg-tour-seen';
+const TOUR_TOTAL = 7;
+
+let fillTimer = null;
 
 function saveState() {
   if (!game || game.status !== 'playing') return;
@@ -479,6 +486,48 @@ async function loadLeaderboard(mode) {
   } catch {
     list.innerHTML = '<p class="lb-empty">Could not load leaderboard</p>';
   }
+}
+
+// ── Tour ──────────────────────────────────────────────────────────────────────
+
+let tourSlide = 0;
+
+function initTour() {
+  $('tour-close').addEventListener('click', closeTour);
+  $('tour-prev').addEventListener('click', () => gotoSlide(tourSlide - 1));
+  $('tour-next').addEventListener('click', () => gotoSlide(tourSlide + 1));
+  $('tour-got-it').addEventListener('click', closeTour);
+  $('how-to-play-btn').addEventListener('click', openTour);
+
+  if (!localStorage.getItem(TOUR_KEY)) openTour();
+}
+
+function openTour() {
+  tourSlide = 0;
+  renderTourSlide();
+  $('tour-modal').hidden = false;
+}
+
+function closeTour() {
+  $('tour-modal').hidden = true;
+  localStorage.setItem(TOUR_KEY, '1');
+}
+
+function gotoSlide(n) {
+  tourSlide = Math.max(0, Math.min(TOUR_TOTAL - 1, n));
+  renderTourSlide();
+}
+
+function renderTourSlide() {
+  document.querySelectorAll('.tour-slide').forEach((el, i) => {
+    el.hidden = i !== tourSlide;
+  });
+  document.querySelectorAll('.tour-dot').forEach((el, i) => {
+    el.classList.toggle('active', i === tourSlide);
+  });
+  $('tour-prev').classList.toggle('invisible', tourSlide === 0);
+  $('tour-next').hidden = tourSlide === TOUR_TOTAL - 1;
+  $('tour-got-it').hidden = tourSlide !== TOUR_TOTAL - 1;
 }
 
 // ── Go ────────────────────────────────────────────────────────────────────────

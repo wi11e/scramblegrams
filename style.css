@@ -74,7 +74,8 @@ body {
 
 .start-sub { color: var(--col-3); font-size: .95rem; }
 
-#lb-icon-btn {
+#lb-icon-btn,
+#how-to-play-btn {
   background: transparent;
   color: var(--col-3);
   padding: 4px;
@@ -82,7 +83,10 @@ body {
   transition: color 80ms;
   flex-shrink: 0;
 }
-#lb-icon-btn:hover { color: var(--col-dark); }
+#lb-icon-btn:hover,
+#how-to-play-btn:hover { color: var(--col-dark); }
+
+#how-to-play-btn { font-size: 1.1rem; font-weight: 800; width: 30px; text-align: center; }
 
 .mode-group {
   display: flex;
@@ -176,7 +180,7 @@ bg-game-header {
 
 .header-title { font-size: 1.2rem; font-weight: 800; letter-spacing: .2em; }
 
-.header-stats { display: flex; justify-content: center; gap: 32px; }
+.header-stats { display: flex; justify-content: center; align-items: center; gap: 28px; }
 
 .stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .stat-val { font-size: 1.1rem; font-weight: 700; line-height: 1; }
@@ -413,27 +417,70 @@ sg-tray {
   color: #fff;
 }
 
-/* ── Draw + Done buttons ──────────────────────────────────────────────────── */
+/* ── Header retire button ─────────────────────────────────────────────────── */
 
-#bottom-actions { display: flex; gap: 8px; }
-
-#draw-btn {
-  flex: 1;
-  padding: 13px;
-  background: var(--col-dark);
-  color: #fff;
-  font-size: .9rem;
-  border-radius: 6px;
-}
-
-#done-btn {
-  padding: 13px 16px;
+.header-retire-btn {
   background: transparent;
   color: var(--col-3);
-  border: 2px solid var(--col-2);
-  font-size: .8rem;
+  padding: 4px 6px;
   border-radius: 6px;
+  transition: color 80ms, background 80ms;
+  flex-shrink: 0;
 }
+
+.header-retire-btn:hover { color: var(--col-error); background: rgba(201,65,75,.08); }
+
+/* ── Retire confirm modal ─────────────────────────────────────────────────── */
+
+#retire-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,.55);
+}
+
+.retire-card {
+  background: var(--col-0);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 280px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+
+.retire-question {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.retire-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.retire-btn {
+  flex: 1;
+  padding: 13px;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: .9rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 80ms;
+}
+
+.retire-btn:active { opacity: .8; }
+.retire-btn-no  { background: var(--col-1); color: var(--col-dark); border: 2px solid var(--col-2); }
+.retire-btn-yes { background: var(--col-dark); color: #fff; }
 
 .status-msg {
   font-size: .8rem;
@@ -654,3 +701,243 @@ sg-tray {
 }
 
 .shake { animation: shake .38s ease; }
+
+/* ── Tour modal ───────────────────────────────────────────────────────────── */
+
+#tour-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,.55);
+}
+
+.tour-card {
+  background: var(--col-0);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+
+.tour-card-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 12px 0;
+}
+
+.tour-close-btn {
+  background: var(--col-1);
+  color: var(--col-3);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: .85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tour-close-btn:hover { background: var(--col-2); }
+
+.tour-slides-wrap {
+  padding: 8px 24px 8px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tour-slide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.tour-visual {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--col-1);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.tour-label {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--col-3);
+}
+
+.tour-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.tour-body {
+  font-size: .875rem;
+  color: var(--col-3);
+  line-height: 1.5;
+}
+
+/* Tile mockups */
+.tour-tiles {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tour-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: .82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 2px solid var(--col-2);
+  border-radius: 4px;
+  background: var(--col-0);
+  color: var(--col-dark);
+  flex-shrink: 0;
+}
+
+.tour-tile.claimed {
+  background: var(--col-claimed);
+  color: #fff;
+  border-color: var(--col-claimed);
+}
+
+.tour-tile.from-word {
+  background: var(--col-from-word);
+  color: #fff;
+  border-color: var(--col-from-word);
+}
+
+.tour-tile-new {
+  border-color: var(--col-success);
+}
+
+.tour-arrow {
+  font-size: 1.1rem;
+  color: var(--col-3);
+  line-height: 1;
+}
+
+.tour-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tour-plus {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--col-3);
+}
+
+.tour-pts {
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--col-success);
+  margin-left: 2px;
+}
+
+.tour-score-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Modes slide */
+.tour-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.tour-mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border: 2px solid var(--col-2);
+  border-radius: 6px;
+}
+
+.tour-mode.tour-mode-highlight { border-color: var(--col-dark); }
+
+.tour-mode-name { font-weight: 700; font-size: .85rem; }
+.tour-mode-desc { font-size: .75rem; color: var(--col-3); }
+
+/* Footer nav */
+.tour-footer {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 18px;
+  border-top: 1px solid var(--col-2);
+  gap: 8px;
+}
+
+.tour-dots {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tour-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--col-2);
+  transition: background 150ms;
+  flex-shrink: 0;
+}
+
+.tour-dot.active { background: var(--col-dark); }
+
+.tour-nav-btn {
+  background: var(--col-1);
+  color: var(--col-dark);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.tour-nav-btn:hover { background: var(--col-2); }
+.tour-nav-btn.invisible { visibility: hidden; pointer-events: none; }
+
+.tour-footer-right {
+  min-width: 40px;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.tour-got-it {
+  background: var(--col-dark);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: .85rem;
+  white-space: nowrap;
+}
