@@ -66,9 +66,10 @@ async function boot() {
   wordBoard.addEventListener('word-tap', e => addWordToTray(e.detail.wordId));
 
   // Tray events
-  trayEl.addEventListener('tray-clear',   onTrayClear);
-  trayEl.addEventListener('tray-claim',   onClaim);
-  trayEl.addEventListener('tray-reorder', e => reorderTray(e.detail));
+  trayEl.addEventListener('tray-clear',    onTrayClear);
+  trayEl.addEventListener('tray-claim',    onClaim);
+  trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
+  trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
 }
 
 // ── Screen helper ─────────────────────────────────────────────────────────────
@@ -134,6 +135,13 @@ function addWordToTray(wordId) {
   render();
 }
 
+function returnTileFromTray(idx) {
+  const tile = tray[idx];
+  if (!tile || tile.origin !== 'unclaimed') return; // word-origin tiles can't go back
+  tray.splice(idx, 1);
+  render();
+}
+
 function onTrayClear() {
   tray = [];
   wordIdsInTray.clear();
@@ -172,6 +180,11 @@ function onClaim() {
     wordIdsInTray.clear();
     render();
     saveState();
+    // Scroll so the newly added word is visible
+    requestAnimationFrame(() => {
+      const body = document.getElementById('game-body');
+      body.scrollTop = body.scrollHeight;
+    });
   } else {
     flash(result.error, 'error');
     trayEl.classList.add('shake');
@@ -253,7 +266,7 @@ function updateDrawButton() {
   drawBtn.disabled = !game.canDraw();
   drawBtn.textContent = game.bag.length === 0
     ? 'Bag empty'
-    : `Draw  (${game.bag.length})`;
+    : `New letter  (${game.bag.length})`;
 }
 
 function flash(msg, type) {

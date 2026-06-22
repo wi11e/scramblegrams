@@ -194,11 +194,12 @@ class SgTray extends HTMLElement {
     inner.scrollLeft = prevScroll;
     this.appendChild(inner);
 
-    // Claim button
+    // Claim button — ✓ when valid, ○ when not
     const claimBtn = document.createElement('button');
     claimBtn.className = `tray-claim${this._valid ? ' valid' : ''}`;
-    claimBtn.textContent = 'Claim';
+    claimBtn.textContent = this._valid ? '✓' : '○';
     claimBtn.disabled = !this._valid;
+    claimBtn.setAttribute('aria-label', 'Claim word');
     claimBtn.addEventListener('click', () =>
       this.dispatchEvent(new CustomEvent('tray-claim', { bubbles: true }))
     );
@@ -207,38 +208,28 @@ class SgTray extends HTMLElement {
 
   _setupDrag(container) {
     let drag = null;
+    const THRESHOLD = 6;
 
     container.addEventListener('pointerdown', (e) => {
       const tileEl = e.target.closest('.tray-tile');
       if (!tileEl) return;
       e.preventDefault();
 
-      const idx = parseInt(tileEl.dataset.idx);
+      const idx  = parseInt(tileEl.dataset.idx);
       const rect = tileEl.getBoundingClientRect();
 
-      // Create ghost that follows the pointer
-      const ghost = document.createElement('div');
-      ghost.className = `tray-ghost${tileEl.classList.contains('from-word') ? ' from-word' : ''}`;
-      ghost.setAttribute('letter', tileEl.getAttribute('letter'));
-      Object.assign(ghost.style, {
-        position: 'fixed',
-        width:  `${rect.width}px`,
-        height: `${rect.height}px`,
-        left:   `${rect.left}px`,
-        top:    `${rect.top}px`,
-        pointerEvents: 'none',
-        zIndex: '1000',
-      });
-      document.body.appendChild(ghost);
-
-      tileEl.classList.add('tray-dragging');
-
+      // Ghost is created lazily once the pointer moves past the drag threshold.
+      // A pointer that never exceeds the threshold is treated as a tap.
       drag = {
         idx,
-        ghost,
         tileEl,
+        ghost:   null,
+        started: false,
+        startX:  e.clientX,
+        startY:  e.clientY,
         offsetX: e.clientX - rect.left,
         offsetY: e.clientY - rect.top,
+        rect,
       };
 
       container.setPointerCapture(e.pointerId);
@@ -247,17 +238,53 @@ class SgTray extends HTMLElement {
     container.addEventListener('pointermove', (e) => {
       if (!drag) return;
       e.preventDefault();
+
+      const moved = Math.abs(e.clientX - drag.startX) > THRESHOLD
+                 || Math.abs(e.clientY - drag.startY) > THRESHOLD;
+
+      if (!moved) return;
+
+      // First move past threshold — create ghost and mark tile as dragging
+      if (!drag.started) {
+        drag.started = true;
+        drag.tileEl.classList.add('tray-dragging');
+
+        const ghost = document.createElement('div');
+        ghost.className = `tray-ghost${drag.tileEl.classList.contains('from-word') ? ' from-word' : ''}`;
+        ghost.setAttribute('letter', drag.tileEl.getAttribute('letter'));
+        Object.assign(ghost.style, {
+          position: 'fixed',
+          width:  `${drag.rect.width}px`,
+          height: `${drag.rect.height}px`,
+          left:   `${drag.rect.left}px`,
+          top:    `${drag.rect.top}px`,
+          pointerEvents: 'none',
+          zIndex: '1000',
+        });
+        document.body.appendChild(ghost);
+        drag.ghost = ghost;
+      }
+
       drag.ghost.style.left = `${e.clientX - drag.offsetX}px`;
       drag.ghost.style.top  = `${e.clientY - drag.offsetY}px`;
     });
 
     const end = (e) => {
       if (!drag) return;
-      const { idx, ghost, tileEl } = drag;
+      const { idx, ghost, tileEl, started } = drag;
       drag = null;
 
-      ghost.remove();
+      if (ghost) ghost.remove();
       tileEl.classList.remove('tray-dragging');
+
+      // Tap (never crossed drag threshold) — return unclaimed tiles to the rack
+      if (!started) {
+        this.dispatchEvent(new CustomEvent('tray-tile-tap', {
+          bubbles: true,
+          detail: { idx },
+        }));
+        return;
+      }
 
       // Find insertion index in a 2D wrapped layout.
       // Tiles are in reading order; insert before the first tile where
