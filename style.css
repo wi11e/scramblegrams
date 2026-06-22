@@ -65,16 +65,22 @@ body {
 }
 
 .start-title { font-size: 2.2rem; font-weight: 800; letter-spacing: .25em; }
-.start-sub   { color: var(--col-3); font-size: .95rem; }
+
+.start-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-sub { color: var(--col-3); font-size: .95rem; }
 
 #lb-icon-btn {
-  position: absolute;
-  right: 0;
   background: transparent;
   color: var(--col-3);
-  padding: 6px;
+  padding: 4px;
   border-radius: 6px;
   transition: color 80ms;
+  flex-shrink: 0;
 }
 #lb-icon-btn:hover { color: var(--col-dark); }
 
@@ -486,11 +492,11 @@ sg-tray {
 
 #profile-screen {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 48px 24px;
+  gap: 16px;
+  padding: 32px 24px 24px;
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
@@ -508,6 +514,19 @@ sg-tray {
 .screen-sub   { color: var(--col-3); font-size: .875rem; margin-top: -12px; }
 
 .profile-field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+/* flag-field expands to fill remaining space, with its scroll inside */
+.flag-field { flex: 1; min-height: 0; }
+
+.flag-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--col-2);
+  border-radius: 8px;
+  padding: 8px;
+  height: 100%;
+}
 
 .field-label {
   font-size: .7rem;

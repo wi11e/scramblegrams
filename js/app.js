@@ -419,19 +419,17 @@ function buildFlagGrid() {
     grid.appendChild(btn);
   });
 
-  // Pre-select existing profile if any
-  const profile = getProfile();
-  if (profile) {
-    $('profile-name').value = profile.playerName;
-    _selectedFlag = profile.countryCode;
-    grid.querySelector(`[data-code="${profile.countryCode}"]`)?.classList.add('selected');
-    updateProfileSaveBtn();
-  }
+  // Pre-select: existing profile country, or default to XX (checkered flag)
+  const profile  = getProfile();
+  const preselect = profile?.countryCode ?? 'XX';
+  if (profile) $('profile-name').value = profile.playerName;
+  _selectedFlag = preselect;
+  grid.querySelector(`[data-code="${preselect}"]`)?.classList.add('selected');
+  updateProfileSaveBtn();
 }
 
 function updateProfileSaveBtn() {
-  const name = $('profile-name').value.trim();
-  $('profile-save').disabled = name.length < 1 || !_selectedFlag;
+  $('profile-save').disabled = $('profile-name').value.trim().length < 1;
 }
 
 function onProfileSave() {

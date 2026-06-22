@@ -19,16 +19,7 @@
     <div class="start-top">
       <h1 class="start-title">SCRAMBLEGRAMS</h1>
     </div>
-    <div class="start-sub-row">
-      <p class="start-sub">Build words, score points</p>
-      <button id="lb-icon-btn" aria-label="Leaderboard">
-        <svg width="22" height="18" viewBox="0 0 22 18" fill="currentColor">
-          <rect x="0" y="6"  width="6" height="12" rx="1.5"/>
-          <rect x="8" y="0"  width="6" height="18" rx="1.5"/>
-          <rect x="16" y="9" width="6" height="9"  rx="1.5"/>
-        </svg>
-      </button>
-    </div>
+    <p class="start-sub">Build words, score points</p>
 
     <fieldset class="mode-group">
       <legend>Game mode</legend>
@@ -55,6 +46,13 @@
     </fieldset>
 
     <button id="start-btn" class="btn-primary">Start Game</button>
+    <button id="lb-icon-btn" aria-label="Leaderboard">
+      <svg width="22" height="18" viewBox="0 0 22 18" fill="currentColor">
+        <rect x="0" y="6"  width="6" height="12" rx="1.5"/>
+        <rect x="8" y="0"  width="6" height="18" rx="1.5"/>
+        <rect x="16" y="9" width="6" height="9"  rx="1.5"/>
+      </svg>
+    </button>
   </div>
 
   <!-- ── Profile setup ──────────────────────────────────────────────────────── -->

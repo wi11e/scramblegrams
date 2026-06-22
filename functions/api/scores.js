@@ -33,6 +33,7 @@ export async function onRequestPost({ request, env }) {
   if (name.length < 1)
     return Response.json({ error: 'Name required' }, { status: 400, headers: CORS });
 
+  // XX = checkered flag (no country); any 2-letter code passes — ^[A-Z]{2}$ already matches XX
   if (typeof countryCode !== 'string' || !/^[A-Z]{2}$/.test(countryCode))
     return Response.json({ error: 'Invalid country code' }, { status: 400, headers: CORS });
 
