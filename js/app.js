@@ -1,12 +1,20 @@
 import { loadWordList, isValidWord } from './wordlist.js';
 import { ScramblergramsGame, TIME_LIMITS } from './game.js';
+import { getProfile, saveProfile, hasProfile, COUNTRIES, flagEmoji } from './profile.js';
+import { submitScore, fetchLeaderboard } from './api.js';
 import './elements.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const $ = id => document.getElementById(id);
 
-const screens   = { start: $('start-screen'), game: $('game-screen'), result: $('result-screen') };
+const screens   = {
+  start:       $('start-screen'),
+  profile:     $('profile-screen'),
+  leaderboard: $('leaderboard-screen'),
+  game:        $('game-screen'),
+  result:      $('result-screen'),
+};
 const header    = $('header');
 const wordBoard = $('word-board');
 const tileRack  = $('tile-rack');
@@ -53,11 +61,12 @@ async function boot() {
     render();
   }
 
-  startBtn.addEventListener('click', startGame);
+  startBtn.addEventListener('click', onStartClick);
   drawBtn.addEventListener('click', onDraw);
   doneBtn.addEventListener('click', onDone);
   shareBtn.addEventListener('click', onShare);
   $('play-again-btn').addEventListener('click', () => { clearSavedState(); location.reload(); });
+  $('lb-result-btn').addEventListener('click', () => showLeaderboard(game?.mode ?? 'classical'));
 
   // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
@@ -70,6 +79,25 @@ async function boot() {
   trayEl.addEventListener('tray-claim',    onClaim);
   trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
   trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
+
+  // Leaderboard icon on start screen
+  $('lb-icon-btn').addEventListener('click', () => showLeaderboard('classical'));
+
+  // Profile screen
+  $('profile-back').addEventListener('click', () => show('start'));
+  $('profile-save').addEventListener('click', onProfileSave);
+  $('profile-name').addEventListener('input', updateProfileSaveBtn);
+  buildFlagGrid();
+
+  // Leaderboard screen
+  $('lb-back').addEventListener('click', () => show('start'));
+  document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      loadLeaderboard(tab.dataset.mode);
+    });
+  });
 }
 
 // ── Screen helper ─────────────────────────────────────────────────────────────
@@ -79,6 +107,11 @@ function show(name) {
 }
 
 // ── Game start ────────────────────────────────────────────────────────────────
+
+function onStartClick() {
+  if (!hasProfile()) { show('profile'); return; }
+  startGame();
+}
 
 function startGame() {
   const mode = document.querySelector('input[name="mode"]:checked').value;
@@ -211,7 +244,7 @@ function onDone() {
 
 // ── End game ──────────────────────────────────────────────────────────────────
 
-function endGame() {
+async function endGame() {
   show('result');
 
   $('final-score').innerHTML =
@@ -220,13 +253,39 @@ function endGame() {
   const m = Math.floor(timerSecs / 60);
   const s = timerSecs % 60;
   $('final-time').textContent =
-    game.mode === 'classical' ? `Time: ${m}:${String(s).padStart(2, '0')}` : '';
+    game.mode === 'classical' ? `${m}:${String(s).padStart(2, '0')}` : '';
 
   $('final-words').innerHTML = game.words.length
     ? game.words.map(w =>
         `<div class="result-word"><span>${w.text}</span><span class="rw-pts">+${w.letters.length - 2}</span></div>`
       ).join('')
     : '<p class="no-words">No words were claimed</p>';
+
+  // Submit score if there's something to submit
+  const rankEl = $('final-rank');
+  rankEl.textContent = '';
+  if (game.score > 0) {
+    const profile = getProfile();
+    if (profile) {
+      rankEl.textContent = 'Submitting score…';
+      try {
+        const res = await submitScore({
+          playerName:  profile.playerName,
+          countryCode: profile.countryCode,
+          mode:        game.mode,
+          score:       game.score,
+          words:       game.words.map(w => ({ text: w.text })),
+        });
+        if (res.ok) {
+          rankEl.textContent = `You ranked #${res.rank} in ${game.mode} mode`;
+        } else {
+          rankEl.textContent = '';
+        }
+      } catch {
+        rankEl.textContent = ''; // silently fail (e.g. local dev)
+      }
+    }
+  }
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -327,7 +386,7 @@ async function onShare() {
   const timeStr = game.mode === 'classical' ? ` · ${m}:${s}` : '';
   const wordLines = game.words.map(w => `${w.text}  +${w.letters.length - 2}`).join('\n');
 
-  const text = `SCRAMBLEGRAMS 🍌\n${game.score} pts · ${modeLabel}${timeStr}\n\n${wordLines}`;
+  const text = `SCRAMBLEGRAMS 🧠\n${game.score} pts · ${modeLabel}${timeStr}\n\n${wordLines}`;
 
   try {
     await navigator.clipboard.writeText(text);
@@ -336,6 +395,91 @@ async function onShare() {
   } catch {
     shareBtn.textContent = 'Copy failed';
     setTimeout(() => shareBtn.textContent = 'Share score', 2000);
+  }
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+let _selectedFlag = null;
+
+function buildFlagGrid() {
+  const grid = $('flag-grid');
+  COUNTRIES.forEach(code => {
+    const btn = document.createElement('button');
+    btn.className  = 'flag-btn';
+    btn.textContent = flagEmoji(code);
+    btn.dataset.code = code;
+    btn.setAttribute('aria-label', code);
+    btn.addEventListener('click', () => {
+      grid.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      _selectedFlag = code;
+      updateProfileSaveBtn();
+    });
+    grid.appendChild(btn);
+  });
+
+  // Pre-select existing profile if any
+  const profile = getProfile();
+  if (profile) {
+    $('profile-name').value = profile.playerName;
+    _selectedFlag = profile.countryCode;
+    grid.querySelector(`[data-code="${profile.countryCode}"]`)?.classList.add('selected');
+    updateProfileSaveBtn();
+  }
+}
+
+function updateProfileSaveBtn() {
+  const name = $('profile-name').value.trim();
+  $('profile-save').disabled = name.length < 1 || !_selectedFlag;
+}
+
+function onProfileSave() {
+  const name = $('profile-name').value.trim().slice(0, 20);
+  if (!name || !_selectedFlag) return;
+  saveProfile(name, _selectedFlag);
+  startGame();
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+
+function showLeaderboard(mode) {
+  show('leaderboard');
+  // Activate the correct tab
+  document.querySelectorAll('.lb-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+  loadLeaderboard(mode);
+}
+
+async function loadLeaderboard(mode) {
+  const list = $('lb-list');
+  list.innerHTML = '<p class="lb-loading">Loading…</p>';
+
+  try {
+    const entries = await fetchLeaderboard(mode);
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+      list.innerHTML = '<p class="lb-empty">No scores yet — be the first!</p>';
+      return;
+    }
+
+    const profile = getProfile();
+    const medals  = ['🥇', '🥈', '🥉'];
+
+    list.innerHTML = entries.map(e => {
+      const isMe  = profile && e.playerName === profile.playerName && e.countryCode === profile.countryCode;
+      const medal = medals[e.rank - 1] ?? `${e.rank}`;
+      return `
+        <div class="lb-entry${isMe ? ' lb-me' : ''}">
+          <span class="lb-rank">${medal}</span>
+          <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
+          <span class="lb-name">${e.playerName}</span>
+          <span class="lb-score">${e.score}</span>
+        </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<p class="lb-empty">Could not load leaderboard</p>';
   }
 }
 
