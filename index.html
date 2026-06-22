@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scramblegrams</title>
+  <meta name="description" content="Build words, score points">
+  <meta name="theme-color" content="#121213">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Start ─────────────────────────────────────────────────────────────── -->
+  <div id="start-screen">
+    <h1 class="start-title">SCRAMBLEGRAMS</h1>
+    <p class="start-sub">Build words, score points</p>
+
+    <fieldset class="mode-group">
+      <legend>Game mode</legend>
+
+      <label class="mode-card">
+        <input type="radio" name="mode" value="classical" checked>
+        <span class="mode-card-name">Classical</span>
+        <span class="mode-card-desc">Count-up · Play until done</span>
+      </label>
+
+      <label class="mode-card">
+        <input type="radio" name="mode" value="bullet">
+        <span class="mode-card-name">Bullet</span>
+        <span class="mode-card-desc">1 minute</span>
+      </label>
+
+      <label class="mode-card">
+        <input type="radio" name="mode" value="blitz">
+        <span class="mode-card-name">Blitz</span>
+        <span class="mode-card-desc">3 minutes</span>
+      </label>
+
+      <label class="mode-card">
+        <input type="radio" name="mode" value="rapid">
+        <span class="mode-card-name">Rapid</span>
+        <span class="mode-card-desc">10 minutes</span>
+      </label>
+    </fieldset>
+
+    <button id="start-btn" class="btn-primary">Start Game</button>
+  </div>
+
+  <!-- ── Game ──────────────────────────────────────────────────────────────── -->
+  <div id="game-screen" hidden>
+
+    <bg-game-header id="header"></bg-game-header>
+
+    <!-- scrollable word board -->
+    <div id="game-body">
+      <bg-word-board id="word-board"></bg-word-board>
+    </div>
+
+    <!-- sticky bottom panel -->
+    <div id="bottom-panel">
+      <bg-tile-rack id="tile-rack"></bg-tile-rack>
+
+      <sg-tray id="tray"></sg-tray>
+
+      <div id="bottom-actions">
+        <button id="draw-btn">Draw</button>
+        <button id="done-btn">Done</button>
+      </div>
+
+      <p id="status-msg" class="status-msg"></p>
+    </div>
+
+  </div>
+
+  <!-- ── Result ─────────────────────────────────────────────────────────────── -->
+  <div id="result-screen" hidden>
+    <h2>Game over</h2>
+    <div id="final-score"></div>
+    <p id="final-time"></p>
+    <div id="final-words"></div>
+    <button id="share-btn" class="btn-secondary">Share score</button>
+    <button id="play-again-btn" class="btn-primary">Play again</button>
+  </div>
+
+</div><!-- #app -->
+
+<!--
+  Run with a local server — ES modules & fetch require HTTP:
+    python3 -m http.server 8080
+  then open http://localhost:8080
+-->
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>
