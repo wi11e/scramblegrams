@@ -68,7 +68,7 @@ async function boot() {
   $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
   $('play-again-btn').addEventListener('click', () => { clearSavedState(); location.reload(); });
-  $('lb-result-btn').addEventListener('click', () => showLeaderboard(game?.mode ?? 'classical'));
+  $('lb-result-btn').addEventListener('click', () => openLeaderboard(game?.mode ?? 'classical', true));
 
   // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
@@ -83,12 +83,12 @@ async function boot() {
   trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
 
   // Leaderboard icon on start screen
-  $('lb-icon-btn').addEventListener('click', () => showLeaderboard('classical'));
+  $('lb-icon-btn').addEventListener('click', () => openLeaderboard('classical', false));
 
   initTour();
 
   // Profile screen
-  $('profile-back').addEventListener('click', () => show('start'));
+  $('profile-back').addEventListener('click', () => lbFromResult ? show('result') : show('start'));
   $('profile-save').addEventListener('click', onProfileSave);
   $('profile-name').addEventListener('input', updateProfileSaveBtn);
   buildFlagGrid();
@@ -113,7 +113,6 @@ function show(name) {
 // ── Game start ────────────────────────────────────────────────────────────────
 
 function onStartClick() {
-  if (!hasProfile()) { show('profile'); return; }
   startGame();
 }
 
@@ -121,8 +120,9 @@ function startGame() {
   const mode = document.querySelector('input[name="mode"]:checked').value;
   game        = new ScramblergramsGame(mode);
   timerSecs   = TIME_LIMITS[mode] ?? 0;
-  tray        = [];
+  tray          = [];
   wordIdsInTray = new Set();
+  scoreSubmitted = false;
 
   show('game');
   startTimer(mode);
@@ -255,7 +255,7 @@ function onDone() {
 
 // ── End game ──────────────────────────────────────────────────────────────────
 
-async function endGame() {
+function endGame() {
   show('result');
 
   $('final-score').innerHTML =
@@ -272,31 +272,7 @@ async function endGame() {
       ).join('')
     : '<p class="no-words">No words were claimed</p>';
 
-  // Submit score if there's something to submit
-  const rankEl = $('final-rank');
-  rankEl.textContent = '';
-  if (game.score > 0) {
-    const profile = getProfile();
-    if (profile) {
-      rankEl.textContent = 'Submitting score…';
-      try {
-        const res = await submitScore({
-          playerName:  profile.playerName,
-          countryCode: profile.countryCode,
-          mode:        game.mode,
-          score:       game.score,
-          words:       game.words.map(w => ({ text: w.text })),
-        });
-        if (res.ok) {
-          rankEl.textContent = `You ranked #${res.rank} in ${game.mode} mode`;
-        } else {
-          rankEl.textContent = '';
-        }
-      } catch {
-        rankEl.textContent = ''; // silently fail (e.g. local dev)
-      }
-    }
-  }
+  $('final-rank').textContent = '';
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -340,9 +316,11 @@ function flash(msg, type) {
 
 const SAVE_KEY = 'sg-state';
 const TOUR_KEY = 'sg-tour-seen';
-const TOUR_TOTAL = 7;
+const TOUR_TOTAL = 8;
 
 let fillTimer = null;
+let scoreSubmitted = false;
+let lbFromResult   = false;
 
 function saveState() {
   if (!game || game.status !== 'playing') return;
@@ -443,10 +421,42 @@ function onProfileSave() {
   const name = $('profile-name').value.trim().slice(0, 20);
   if (!name || !_selectedFlag) return;
   saveProfile(name, _selectedFlag);
-  startGame();
+  if (lbFromResult) submitCurrentScore();
+  showLeaderboard(lbFromResult ? (game?.mode ?? 'classical') : 'classical');
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
+
+function openLeaderboard(mode, fromResult = false) {
+  lbFromResult = fromResult;
+  if (!hasProfile()) {
+    show('profile');
+    return;
+  }
+  if (fromResult) submitCurrentScore();
+  showLeaderboard(mode);
+}
+
+async function submitCurrentScore() {
+  if (scoreSubmitted || !game || game.score === 0) return;
+  const profile = getProfile();
+  if (!profile) return;
+
+  scoreSubmitted = true;
+  try {
+    const res = await submitScore({
+      playerName:  profile.playerName,
+      countryCode: profile.countryCode,
+      mode:        game.mode,
+      score:       game.score,
+      words:       game.words.map(w => ({ text: w.text })),
+    });
+    const rankEl = $('final-rank');
+    if (rankEl && res.ok) rankEl.textContent = `You ranked #${res.rank} in ${game.mode} mode`;
+  } catch {
+    scoreSubmitted = false;
+  }
+}
 
 function showLeaderboard(mode) {
   show('leaderboard');
