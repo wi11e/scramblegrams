@@ -607,10 +607,10 @@ async function loadLeaderboard(tab) {
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
-          <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
           <span class="lb-name">${e.playerName}</span>
-          <span class="lb-score">${e.score}${star}</span>
+          <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
           ${words}
+          <span class="lb-score">${e.score}${star}</span>
         </div>`;
     }).join('');
   } catch {
