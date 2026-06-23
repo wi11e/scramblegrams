@@ -542,13 +542,13 @@ function onProfileSave() {
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
-function openLeaderboard(tab, context = 'leaderboard') {
+async function openLeaderboard(tab, context = 'leaderboard') {
   profileContext = context;
-  if (!hasProfile()) {
+  if (context === 'result' && !hasProfile()) {
     show('profile');
     return;
   }
-  if (context === 'result') submitCurrentScore();
+  if (context === 'result') await submitCurrentScore();
   showLeaderboard(tab);
 }
 
@@ -566,6 +566,7 @@ async function submitCurrentScore() {
       words:       game.words.map(w => ({ text: w.text })),
       puzzleDate:  getPuzzleDateString(),
     });
+    if (!res.ok) scoreSubmitted = false; // allow retry if server rejected
     const rankEl = $('final-rank');
     if (rankEl && res.ok) rankEl.textContent = `You ranked #${res.rank} today`;
   } catch {
