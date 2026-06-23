@@ -1,0 +1,16 @@
+# One word set per line — each line becomes one day's puzzle.
+# Lines starting with # are ignored.
+# Run with: ./tools/run.sh week 2026-06-24
+#
+# Tips:
+#   - Words must total ≥32 letters (80% of the 40-tile bag)
+#   - 4-5 words of 7-9 letters each works well
+#   - Use ./tools/run.sh suggest to find good combinations
+
+WARDEN DRAWING PLANETS SPORTING BLANKET
+TRAINING STANDING PAINTING RETAINED
+SLENDER REBLENDS SOUTHWEST DETRAINED
+STOKING STOCKING LOCATING STOCKINGS
+CAPTURE RAPTURE SCULPTOR CAPTURES
+GARLANDS PLANTING STANDARD PLANETS
+BREAKING BLANKETS SPARKLED PLANTERS

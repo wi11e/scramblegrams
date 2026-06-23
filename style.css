@@ -116,7 +116,9 @@ body {
 
 #lb-icon-btn,
 #how-to-play-btn,
-#stats-btn {
+#stats-btn,
+#theme-btn,
+#profile-icon-btn {
   background: transparent;
   color: var(--col-3);
   padding: 4px;
@@ -126,7 +128,9 @@ body {
 }
 #lb-icon-btn:hover,
 #how-to-play-btn:hover,
-#stats-btn:hover { color: var(--col-dark); }
+#stats-btn:hover,
+#theme-btn:hover,
+#profile-icon-btn:hover { color: var(--col-dark); }
 
 #how-to-play-btn { font-size: 1.1rem; font-weight: 800; width: 30px; text-align: center; }
 
@@ -560,6 +564,45 @@ sg-tray {
 }
 
 .result-day { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--col-3); }
+
+.final-solution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  background: var(--col-1);
+  border-radius: 10px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.solution-label {
+  width: 100%;
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--col-3);
+  margin-bottom: 2px;
+}
+
+.solution-word {
+  font-size: .875rem;
+  font-weight: 700;
+  background: var(--col-claimed);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+
+.solution-pts { font-weight: 400; opacity: .7; }
+
+.solution-total {
+  margin-left: auto;
+  font-size: .875rem;
+  font-weight: 800;
+  color: var(--col-success);
+}
 
 .result-stats {
   display: flex;
@@ -1006,4 +1049,39 @@ sg-tray {
   border-radius: 20px;
   font-size: .85rem;
   white-space: nowrap;
+}
+
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+  --col-0:       #121213;
+  --col-1:       #1a1a1b;
+  --col-2:       #3a3a3c;
+  --col-3:       #818384;
+  --col-dark:    #ffffff;
+  --col-claimed: #565758;
+}
+
+/* Unclaimed tiles need a visible background distinct from the page */
+[data-theme="dark"] bg-tile { background: var(--col-1); }
+
+/* Primary buttons: white bg needs dark text in dark mode */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .retire-btn-yes,
+[data-theme="dark"] .tour-got-it { color: #121213; }
+
+/* Form inputs need explicit dark background */
+[data-theme="dark"] .field-input {
+  background: var(--col-1);
+  color: var(--col-dark);
+}
+
+/* Leaderboard words */
+.lb-words {
+  width: 100%;
+  font-size: .72rem;
+  color: var(--col-3);
+  letter-spacing: .04em;
+  padding-top: 2px;
+  padding-left: calc(28px + 1.3rem + 20px); /* indent under name */
 }

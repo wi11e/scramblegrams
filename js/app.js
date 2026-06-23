@@ -2,7 +2,7 @@ import { loadWordList, isValidWord } from './wordlist.js';
 import { ScramblergramsGame } from './game.js';
 import { getProfile, saveProfile, hasProfile, COUNTRIES, flagEmoji } from './profile.js';
 import { submitScore, fetchLeaderboard } from './api.js';
-import { createDailyBag, getPuzzleDateString, getDayNumber } from './tiles.js';
+import { loadTodaysBag, getPuzzleDateString, getDayNumber } from './tiles.js';
 import './elements.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -35,13 +35,15 @@ let tray          = [];
 let wordIdsInTray = new Set();
 
 const SAVE_KEY   = 'sg-state';
+const SAVE_ON    =  true
 const TOUR_KEY   = 'sg-tour-seen';
 const STATS_KEY  = 'sg-stats';
 const TOUR_TOTAL = 7;
 
 let fillTimer      = null;
 let scoreSubmitted = false;
-let lbFromResult   = false;
+// 'start' | 'leaderboard' | 'result'
+let profileContext = 'start';
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -80,6 +82,8 @@ function alreadyPlayedToday() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 async function boot() {
+  initTheme();
+
   startBtn.disabled    = true;
   startBtn.textContent = 'Loading…';
 
@@ -105,13 +109,14 @@ async function boot() {
 
   startBtn.addEventListener('click', onStartClick);
   shareBtn.addEventListener('click', onShare);
+  $('theme-btn').addEventListener('click', toggleTheme);
 
   // Retire modal
   header.addEventListener('retire-click', () => { $('retire-modal').hidden = false; });
   $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
 
-  $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', true));
+  $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', 'result'));
 
   // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
@@ -122,7 +127,8 @@ async function boot() {
   trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
   trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
 
-  $('lb-icon-btn').addEventListener('click', () => openLeaderboard('today', false));
+  $('lb-icon-btn').addEventListener('click', () => openLeaderboard('today', 'leaderboard'));
+  $('profile-icon-btn').addEventListener('click', () => { profileContext = 'start'; show('profile'); });
 
   // Stats modal
   $('stats-btn').addEventListener('click', openStats);
@@ -131,7 +137,7 @@ async function boot() {
   initTour();
 
   // Profile screen
-  $('profile-back').addEventListener('click', () => lbFromResult ? show('result') : show('start'));
+  $('profile-back').addEventListener('click', () => profileContext === 'result' ? show('result') : show('start'));
   $('profile-save').addEventListener('click', onProfileSave);
   $('profile-name').addEventListener('input', updateProfileSaveBtn);
   buildFlagGrid();
@@ -163,6 +169,27 @@ function updateStartScreen() {
     startBtn.textContent = 'Play';
     $('played-today').hidden = true;
   }
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
+function initTheme() {
+  const saved      = localStorage.getItem('sg-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved ?? (prefersDark ? 'dark' : 'light'));
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('sg-theme', theme);
+  const isDark = theme === 'dark';
+  $('theme-icon-moon').hidden = isDark;
+  $('theme-icon-sun').hidden  = !isDark;
+  $('theme-btn').setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+}
+
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 }
 
 // ── Screen helper ─────────────────────────────────────────────────────────────
@@ -207,8 +234,8 @@ function onStartClick() {
   startGame();
 }
 
-function startGame() {
-  const bag = createDailyBag();
+async function startGame() {
+  const bag = await loadTodaysBag();
   game      = new ScramblergramsGame('classical', bag);
   timerSecs = 0;
   tray          = [];
@@ -390,7 +417,7 @@ function flash(msg, type) {
 // ── Persistence ───────────────────────────────────────────────────────────────
 
 function saveState() {
-  if (!game || game.status !== 'playing') return;
+  if (!game || game.status !== 'playing' || !SAVE_ON) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       puzzleDate:   getPuzzleDateString(),
@@ -407,6 +434,7 @@ function saveState() {
 }
 
 function loadSavedState() {
+  if (!SAVE_ON) return;
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -497,19 +525,23 @@ function onProfileSave() {
   const name = $('profile-name').value.trim().slice(0, 20);
   if (!name || !_selectedFlag) return;
   saveProfile(name, _selectedFlag);
-  if (lbFromResult) submitCurrentScore();
-  showLeaderboard(lbFromResult ? 'today' : 'today');
+  if (profileContext === 'start') {
+    show('start');
+  } else {
+    if (profileContext === 'result') submitCurrentScore();
+    showLeaderboard('today');
+  }
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
-function openLeaderboard(tab, fromResult = false) {
-  lbFromResult = fromResult;
+function openLeaderboard(tab, context = 'leaderboard') {
+  profileContext = context;
   if (!hasProfile()) {
     show('profile');
     return;
   }
-  if (fromResult) submitCurrentScore();
+  if (context === 'result') submitCurrentScore();
   showLeaderboard(tab);
 }
 
@@ -560,12 +592,15 @@ async function loadLeaderboard(tab) {
     list.innerHTML = entries.map(e => {
       const isMe  = profile && e.playerName === profile.playerName && e.countryCode === profile.countryCode;
       const medal = medals[e.rank - 1] ?? `${e.rank}`;
+      const words = e.words?.length
+        ? `<div class="lb-words">${e.words.join(' · ')}</div>` : '';
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
           <span class="lb-name">${e.playerName}</span>
           <span class="lb-score">${e.score}</span>
+          ${words}
         </div>`;
     }).join('');
   } catch {

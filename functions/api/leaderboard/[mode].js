@@ -20,7 +20,7 @@ export async function onRequestGet({ params, env }) {
     if (mode === 'today') {
       const today = todayUTC();
       ({ results } = await env.DB.prepare(`
-        SELECT s.player_name, s.country_code, s.score
+        SELECT s.player_name, s.country_code, s.score, s.words
         FROM scores s
         INNER JOIN (
           SELECT player_name, MAX(score) AS best, MIN(created_at) AS first_at
@@ -36,7 +36,7 @@ export async function onRequestGet({ params, env }) {
 
     } else {
       ({ results } = await env.DB.prepare(`
-        SELECT s.player_name, s.country_code, s.score
+        SELECT s.player_name, s.country_code, s.score, s.words
         FROM scores s
         INNER JOIN (
           SELECT player_name, MAX(score) AS best, MIN(created_at) AS first_at
@@ -56,6 +56,7 @@ export async function onRequestGet({ params, env }) {
       playerName:  row.player_name,
       countryCode: row.country_code,
       score:       row.score,
+      words:       (() => { try { return JSON.parse(row.words ?? '[]'); } catch { return []; } })(),
     }));
 
     return Response.json(leaderboard, {

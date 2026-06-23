@@ -53,18 +53,34 @@ export function getDayNumber() {
   return Math.floor((getPuzzleDate() - LAUNCH_DATE) / 86400000) + 1;
 }
 
-export function createDailyBag() {
-  const d = getPuzzleDate();
-  // Seed from numeric date: YYYYMMDD
+// Build a bag from a letters array (from puzzles.json or seeded fallback)
+function lettersToTiles(letters) {
+  return letters.map(letter => ({ letter, id: `t${++_uid}` }));
+}
+
+export async function loadTodaysBag() {
+  const today = getPuzzleDateString();
+  try {
+    const res     = await fetch('/puzzles.json');
+    const puzzles = await res.json();
+    const puzzle  = puzzles.find(p => p.date === today);
+    if (puzzle) {
+      // Store solution on window for result screen reveal
+      window.__puzzleSolution = puzzle.solution;
+      // tiles array is in draw order; reverse so .pop() draws from the front
+      return lettersToTiles([...puzzle.tiles].reverse());
+    }
+  } catch { /* fall through to seeded fallback */ }
+
+  // Seeded fallback when no curated puzzle exists for today
+  window.__puzzleSolution = null;
+  const d    = getPuzzleDate();
   const seed = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
   const rng  = makeRng(seed);
-
   const full = createBag();
-  // Fisher-Yates with seeded RNG
   for (let i = full.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [full[i], full[j]] = [full[j], full[i]];
   }
-  // Return last 40 (game draws from the end via .pop())
   return full.slice(full.length - DAILY_TILE_COUNT);
 }
