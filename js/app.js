@@ -609,7 +609,7 @@ async function loadLeaderboard(tab) {
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${e.playerName}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
-          ${words}
+          <span class="lb-words">${words}</span>
           <span class="lb-score">${e.score}pts ${star}</span>
         </div>`;
     }).join('');

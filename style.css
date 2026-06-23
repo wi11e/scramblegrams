@@ -791,6 +791,14 @@ sg-tray {
 .lb-name  { flex-shrink: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 20ch; }
 .lb-score { font-weight: 800; flex-shrink: 0; }
 .lb-perfect { color: var(--col-from-word); font-size: .85rem; margin-left: 3px; }
+.lb-words {
+  width: 100%;
+  font-size: .72rem;
+  color: var(--col-3);
+  letter-spacing: .04em;
+  padding-top: 2px;
+  padding-left: 1.3rem
+}
 
 .lb-loading, .lb-empty {
   color: var(--col-3);
@@ -1095,12 +1103,3 @@ sg-tray {
   color: var(--col-dark);
 }
 
-/* Leaderboard words */
-.lb-words {
-  width: 100%;
-  font-size: .72rem;
-  color: var(--col-3);
-  letter-spacing: .04em;
-  padding-top: 2px;
-  padding-left: calc(28px + 1.3rem + 20px); /* indent under name */
-}
