@@ -57,6 +57,39 @@ function loadCommonWords(limit = 15000) {
   return words;
 }
 
+// ── Used words + similarity ───────────────────────────────────────────────────
+
+function loadUsedWords() {
+  if (!existsSync(PUZZLES)) return new Set();
+  const puzzles = JSON.parse(readFileSync(PUZZLES, 'utf8'));
+  const used = new Set();
+  for (const p of puzzles) for (const w of (p.solution ?? [])) used.add(w.toUpperCase());
+  return used;
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function tooSimilar(a, b) {
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  return levenshtein(a, b) <= 2;
+}
+
+function wordSetHasSimilarity(words) {
+  for (let i = 0; i < words.length; i++)
+    for (let j = i + 1; j < words.length; j++)
+      if (tooSimilar(words[i], words[j])) return true;
+  return false;
+}
+
 // ── Letter frequency arrays (fast multiset ops) ───────────────────────────────
 
 function buildFreq(str) {
@@ -426,9 +459,20 @@ async function main() {
   const commonWords  = loadCommonWords(commonLimit);
   console.log(`✅  ${wordSet.size.toLocaleString()} Scrabble words, ${commonWords.size.toLocaleString()} common words (top ${commonLimit.toLocaleString()})`);
 
+  const usedWords = loadUsedWords();
+
   for (const w of words) {
     if (w.length < 4)        { console.error(`❌  "${w}" too short`); process.exit(1); }
     if (!wordSet.has(w))     { console.error(`❌  "${w}" not in dictionary`); process.exit(1); }
+    if (usedWords.has(w))    { console.error(`❌  "${w}" already used in a previous puzzle`); process.exit(1); }
+  }
+
+  if (wordSetHasSimilarity(words)) {
+    for (let i = 0; i < words.length; i++)
+      for (let j = i + 1; j < words.length; j++)
+        if (tooSimilar(words[i], words[j]))
+          console.error(`❌  "${words[i]}" and "${words[j]}" are too similar (prefix or Levenshtein ≤ 2)`);
+    process.exit(1);
   }
 
   console.log(`✅  Target words: ${words.join(', ')}`);
@@ -502,9 +546,12 @@ async function main() {
     chosenDiff = parseInt(answer.trim());
   }
 
+  let diffWarning = null;
   if (!buckets[chosenDiff]) {
-    console.error(`❌  No ordering at difficulty ${chosenDiff}`);
-    process.exit(1);
+    const available = Object.keys(buckets).map(Number).sort((a, b) => a - b);
+    const fallback  = available[0];
+    diffWarning = `⚠️   Requested difficulty ${chosenDiff} not found — using difficulty ${fallback} (easiest available)`;
+    chosenDiff  = fallback;
   }
 
   // Pick the option with highest richness at chosen difficulty
@@ -529,11 +576,12 @@ async function main() {
     richness:   best.richness,
   };
 
+  if (diffWarning) console.log(`\n${diffWarning}`);
   console.log(`\n🧩  Puzzle:`);
   console.log(`   Date:       ${puzzle.date}`);
   console.log(`   Tiles:      ${puzzle.tiles.join('')}`);
   console.log(`   Solution:   ${puzzle.solution.join(' + ')}  (${targetScore} pts)`);
-  console.log(`   Difficulty: ${chosenDiff} intermediates`);
+  console.log(`   Difficulty: ${chosenDiff} intermediates${diffWarning ? ' ⚠️' : ''}`);
   console.log(`   Richness:   ${best.richness}% of random sims scored ≥${RICH_THRESH} pts`);
 
   let puzzles = [];

@@ -11,10 +11,35 @@ import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const __dir    = dirname(fileURLToPath(import.meta.url));
-const ROOT     = resolve(__dir, '..');
-const WORDLIST = resolve(ROOT, 'wordlist.txt');
+const __dir     = dirname(fileURLToPath(import.meta.url));
+const ROOT      = resolve(__dir, '..');
+const WORDLIST  = resolve(ROOT, 'wordlist.txt');
 const FREQ_FILE = resolve(__dir, 'english-frequency.txt');
+const PUZZLES   = resolve(ROOT, 'puzzles.json');
+
+function loadUsedWords() {
+  if (!existsSync(PUZZLES)) return new Set();
+  const puzzles = JSON.parse(readFileSync(PUZZLES, 'utf8'));
+  const used = new Set();
+  for (const p of puzzles) for (const w of (p.solution ?? [])) used.add(w.toUpperCase());
+  return used;
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function tooSimilar(a, b) {
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  return levenshtein(a, b) <= 2;
+}
 
 function loadCommonWords(limit = 15000) {
   if (!existsSync(FREQ_FILE)) {
@@ -63,7 +88,7 @@ function sharedLetterCount(a, b) {
 // ── Greedy builder ────────────────────────────────────────────────────────────
 // Start with a long word, greedily add words that share letters with the set.
 
-function buildCombination(seed, candidates, targetCount, minLetters, maxLetters, rng) {
+function buildCombination(seed, candidates, targetCount, minLetters, maxLetters, rng, usedWords) {
   const words = [seed];
   let letters = seed.length;
 
@@ -72,6 +97,8 @@ function buildCombination(seed, candidates, targetCount, minLetters, maxLetters,
     const idx = Math.floor(rng() * candidates.length);
     const word = candidates[idx];
     if (words.includes(word)) continue;
+    if (usedWords.has(word)) continue;
+    if (words.some(w => tooSimilar(w, word))) continue;
 
     const newLetters = letters + word.length;
     if (newLetters > maxLetters) continue;
@@ -128,19 +155,20 @@ const log = plainN > 0 ? () => {} : (...a) => console.log(...a);
 log('\n🔤  Loading word lists…');
 const scrabbleWords = new Set(readFileSync(WORDLIST, 'utf8').trim().split('\n').map(w => w.trim().toUpperCase()));
 const commonWordSet = loadCommonWords(commonLimit);
-const commonWords   = [...commonWordSet].filter(w => scrabbleWords.has(w) && w.length >= 5 && w.length <= 9);
-log(`✅  ${commonWords.length.toLocaleString()} words (top 15k common ∩ Scrabble dictionary, 5–9 letters)`);
+const usedWords     = loadUsedWords();
+const commonWords   = [...commonWordSet].filter(w => scrabbleWords.has(w) && w.length >= 5 && w.length <= 9 && !usedWords.has(w));
+log(`✅  ${commonWords.length.toLocaleString()} words (top 15k common ∩ Scrabble dictionary, 5–9 letters, excluding ${usedWords.size} already used)`);
 log(`🔍  Building ${wordCount}-word sets with ${minLetters}–${maxLetters} total letters…\n`);
 
 // Use longer words as seeds (8-9 letters hit the letter count faster)
-const longWords = commonWords.filter(w => w.length >= 7);
+const longWords = commonWords.filter(w => w.length >= 7 && !usedWords.has(w));
 const rng       = makeRng(0xCAFEBABE);
 const seen      = new Set();
 const results   = [];
 
 for (let i = 0; i < tries && results.length < topN * 10; i++) {
   const seed = longWords[Math.floor(rng() * longWords.length)];
-  const combo = buildCombination(seed, commonWords, wordCount, minLetters, maxLetters, rng);
+  const combo = buildCombination(seed, commonWords, wordCount, minLetters, maxLetters, rng, usedWords);
   if (!combo) continue;
 
   const key = combo.words.slice().sort().join('|');

@@ -600,17 +600,16 @@ async function loadLeaderboard(tab) {
     list.innerHTML = entries.map(e => {
       const isMe  = profile && e.playerName === profile.playerName && e.countryCode === profile.countryCode;
       const medal = medals[e.rank - 1] ?? `${e.rank}`;
-      const words = e.words?.length
-        ? `<div class="lb-words">${e.words.join(' · ')}</div>` : '';
       const star = e.usedAllTiles
         ? `<span class="lb-perfect" title="Used all tiles">★</span>` : '';
+      const wordScore = e.words?.length
+        ? `<div class="lb-words">${e.words.join(' · ')}<span class="lb-words-score">${e.score}${star}</span></div>` : '';
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${e.playerName}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
-          <span class="lb-words">${words}</span>
-          <span class="lb-score">${e.score}pts ${star}</span>
+          ${wordScore}
         </div>`;
     }).join('');
   } catch {
