@@ -790,6 +790,7 @@ sg-tray {
 .lb-flag  { font-size: 1.3rem; flex-shrink: 0; }
 .lb-name  { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-score { font-weight: 800; flex-shrink: 0; }
+.lb-perfect { color: var(--col-from-word); font-size: .85rem; margin-left: 3px; }
 
 .lb-loading, .lb-empty {
   color: var(--col-3);
@@ -1051,6 +1052,23 @@ sg-tray {
   white-space: nowrap;
 }
 
+/* ── Confetti ────────────────────────────────────────────────────────────── */
+
+.confetti-piece {
+  position: fixed;
+  pointer-events: none;
+  z-index: 200;
+  border-radius: 2px;
+  animation: confetti-fly linear forwards;
+}
+
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(0); opacity: 1; }
+  8%   { transform: translate(calc(var(--cx) * .08), calc(var(--cy) * .08)) scale(1) rotate(calc(var(--cr) * .08)); }
+  75%  { opacity: 1; }
+  100% { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)) scale(1); opacity: 0; }
+}
+
 /* ── Dark mode ───────────────────────────────────────────────────────────── */
 
 [data-theme="dark"] {
@@ -1065,10 +1083,11 @@ sg-tray {
 /* Unclaimed tiles need a visible background distinct from the page */
 [data-theme="dark"] bg-tile { background: var(--col-1); }
 
-/* Primary buttons: white bg needs dark text in dark mode */
+/* White-bg elements need dark text in dark mode */
 [data-theme="dark"] .btn-primary,
 [data-theme="dark"] .retire-btn-yes,
-[data-theme="dark"] .tour-got-it { color: #121213; }
+[data-theme="dark"] .tour-got-it,
+[data-theme="dark"] .lb-tab.active { color: #121213; }
 
 /* Form inputs need explicit dark background */
 [data-theme="dark"] .field-input {

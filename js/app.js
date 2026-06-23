@@ -40,8 +40,9 @@ const TOUR_KEY   = 'sg-tour-seen';
 const STATS_KEY  = 'sg-stats';
 const TOUR_TOTAL = 7;
 
-let fillTimer      = null;
-let scoreSubmitted = false;
+let fillTimer           = null;
+let scoreSubmitted      = false;
+let allTilesCelebrated  = false;
 // 'start' | 'leaderboard' | 'result'
 let profileContext = 'start';
 
@@ -238,9 +239,10 @@ async function startGame() {
   const bag = await loadTodaysBag();
   game      = new ScramblergramsGame('classical', bag);
   timerSecs = 0;
-  tray          = [];
-  wordIdsInTray = new Set();
-  scoreSubmitted = false;
+  tray                 = [];
+  wordIdsInTray        = new Set();
+  scoreSubmitted       = false;
+  allTilesCelebrated   = false;
 
   show('game');
   startTimer();
@@ -401,6 +403,11 @@ function renderWordBoard() {
 function renderRack() {
   const inTray = new Set(tray.filter(t => t.origin === 'unclaimed').map(t => t.tileId));
   tileRack.setTiles(game.unclaimed.filter(t => !inTray.has(t.id)));
+
+  if (!allTilesCelebrated && game.bag.length === 0 && game.unclaimed.length === 0 && game.words.length > 0) {
+    allTilesCelebrated = true;
+    triggerConfetti();
+  }
 }
 
 function renderTray() {
@@ -594,17 +601,60 @@ async function loadLeaderboard(tab) {
       const medal = medals[e.rank - 1] ?? `${e.rank}`;
       const words = e.words?.length
         ? `<div class="lb-words">${e.words.join(' · ')}</div>` : '';
+      const star = e.usedAllTiles
+        ? `<span class="lb-perfect" title="Used all tiles">★</span>` : '';
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
           <span class="lb-name">${e.playerName}</span>
-          <span class="lb-score">${e.score}</span>
+          <span class="lb-score">${e.score}${star}</span>
           ${words}
         </div>`;
     }).join('');
   } catch {
     list.innerHTML = '<p class="lb-empty">Could not load leaderboard</p>';
+  }
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+
+function triggerConfetti() {
+  const COLORS  = ['#538d4e','#b59f3b','#c9414b','#4a9fe3','#9b59b6','#e67e22','#ffffff'];
+  const W       = window.innerWidth;
+  const H       = window.innerHeight;
+  const COUNT   = 70;
+
+  for (let i = 0; i < COUNT; i++) {
+    const fromLeft = i < COUNT / 2;
+    const el       = document.createElement('div');
+    el.className   = 'confetti-piece';
+
+    const color    = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const w        = 6  + Math.random() * 8;
+    const h        = w  * (0.4 + Math.random() * 0.8);
+    const startY   = H  * (0.15 + Math.random() * 0.55);
+    const tx       = (fromLeft ? 1 : -1) * W * (0.3 + Math.random() * 0.55);
+    const ty       = -(H * (0.15 + Math.random() * 0.45));
+    const rot      = (fromLeft ? 1 : -1) * (200 + Math.random() * 540);
+    const duration = 1.2 + Math.random() * 0.9;
+    const delay    = Math.random() * 0.35;
+
+    Object.assign(el.style, {
+      background:         color,
+      width:              `${w}px`,
+      height:             `${h}px`,
+      left:               `${fromLeft ? 0 : W}px`,
+      top:                `${startY}px`,
+      animationDuration:  `${duration}s`,
+      animationDelay:     `${delay}s`,
+    });
+    el.style.setProperty('--cx', `${tx}px`);
+    el.style.setProperty('--cy', `${ty}px`);
+    el.style.setProperty('--cr', `${rot}deg`);
+
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
   }
 }
 

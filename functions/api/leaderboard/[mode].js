@@ -51,13 +51,18 @@ export async function onRequestGet({ params, env }) {
       `).bind().all());
     }
 
-    const leaderboard = results.map((row, i) => ({
-      rank:        i + 1,
-      playerName:  row.player_name,
-      countryCode: row.country_code,
-      score:       row.score,
-      words:       (() => { try { return JSON.parse(row.words ?? '[]'); } catch { return []; } })(),
-    }));
+    const leaderboard = results.map((row, i) => {
+      const words = (() => { try { return JSON.parse(row.words ?? '[]'); } catch { return []; } })();
+      const usedAllTiles = words.reduce((sum, w) => sum + w.length, 0) === 40;
+      return {
+        rank:        i + 1,
+        playerName:  row.player_name,
+        countryCode: row.country_code,
+        score:       row.score,
+        words,
+        usedAllTiles,
+      };
+    });
 
     return Response.json(leaderboard, {
       headers: { ...CORS, 'Cache-Control': mode === 'today' ? 'public, max-age=30' : 'public, max-age=300' },
