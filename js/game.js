@@ -9,9 +9,9 @@ const MIN_WORD_LEN = 4;
 function makeWordId() { return 'w' + crypto.randomUUID().slice(0, 8); }
 
 export class ScramblergramsGame {
-  constructor(mode = 'classical') {
+  constructor(mode = 'classical', bag = null) {
     this.mode = mode;
-    this.bag = shuffleBag(createBag());
+    this.bag = bag ?? shuffleBag(createBag());
     this.unclaimed = [];
     this.words = [];
     this.score = 0;

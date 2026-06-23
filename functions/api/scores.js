@@ -1,5 +1,5 @@
 // POST /api/scores
-// Validates words server-side, inserts score, returns player rank.
+// Validates words server-side, inserts daily score, returns today's rank.
 
 let _words = null;
 
@@ -11,8 +11,12 @@ async function getWordSet(origin) {
   return _words;
 }
 
-const MODES = new Set(['classical', 'bullet', 'blitz', 'rapid']);
-const CORS  = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+
+function todayUTC() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
 
 export async function onRequestOptions() {
   return new Response(null, {
@@ -25,7 +29,7 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400, headers: CORS }); }
 
-  const { playerName, countryCode, mode, score, words } = body;
+  const { playerName, countryCode, score, words, puzzleDate } = body;
 
   // ── Input sanity ──────────────────────────────────────────────────────────
 
@@ -33,12 +37,13 @@ export async function onRequestPost({ request, env }) {
   if (name.length < 1)
     return Response.json({ error: 'Name required' }, { status: 400, headers: CORS });
 
-  // XX = checkered flag (no country); any 2-letter code passes — ^[A-Z]{2}$ already matches XX
   if (typeof countryCode !== 'string' || !/^[A-Z]{2}$/.test(countryCode))
     return Response.json({ error: 'Invalid country code' }, { status: 400, headers: CORS });
 
-  if (!MODES.has(mode))
-    return Response.json({ error: 'Invalid mode' }, { status: 400, headers: CORS });
+  // Only accept today's date (prevents backdating scores)
+  const today = todayUTC();
+  if (puzzleDate !== today)
+    return Response.json({ error: 'Invalid puzzle date' }, { status: 400, headers: CORS });
 
   if (typeof score !== 'number' || !Number.isInteger(score) || score < 0 || score > 500)
     return Response.json({ error: 'Invalid score' }, { status: 400, headers: CORS });
@@ -70,19 +75,19 @@ export async function onRequestPost({ request, env }) {
     const wordsJson = JSON.stringify(words.map(w => String(w.text).toUpperCase()));
 
     await env.DB.prepare(
-      'INSERT INTO scores (player_name, country_code, mode, score, words) VALUES (?, ?, ?, ?, ?)'
-    ).bind(name, countryCode, mode, score, wordsJson).run();
+      'INSERT INTO scores (player_name, country_code, mode, score, words, puzzle_date) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(name, countryCode, 'classical', score, wordsJson, today).run();
 
-    // Rank = number of players whose best score beats this one, + 1
+    // Today's rank
     const { rank } = await env.DB.prepare(`
       SELECT COUNT(*) + 1 AS rank
       FROM (
         SELECT player_name, MAX(score) AS top
-        FROM scores WHERE mode = ?
+        FROM scores WHERE puzzle_date = ?
         GROUP BY player_name
       )
       WHERE top > ?
-    `).bind(mode, score).first();
+    `).bind(today, score).first();
 
     return Response.json({ ok: true, rank }, { headers: CORS });
 

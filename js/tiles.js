@@ -25,3 +25,46 @@ export function shuffleBag(bag) {
   }
   return arr;
 }
+
+// mulberry32 seeded PRNG
+function makeRng(seed) {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+export const DAILY_TILE_COUNT = 40;
+export const LAUNCH_DATE = new Date(Date.UTC(2026, 5, 23)); // 2026-06-23 = Day 1
+
+export function getPuzzleDate() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+export function getPuzzleDateString() {
+  const d = getPuzzleDate();
+  return d.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+}
+
+export function getDayNumber() {
+  return Math.floor((getPuzzleDate() - LAUNCH_DATE) / 86400000) + 1;
+}
+
+export function createDailyBag() {
+  const d = getPuzzleDate();
+  // Seed from numeric date: YYYYMMDD
+  const seed = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  const rng  = makeRng(seed);
+
+  const full = createBag();
+  // Fisher-Yates with seeded RNG
+  for (let i = full.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [full[i], full[j]] = [full[j], full[i]];
+  }
+  // Return last 40 (game draws from the end via .pop())
+  return full.slice(full.length - DAILY_TILE_COUNT);
+}

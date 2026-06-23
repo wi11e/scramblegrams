@@ -1,7 +1,8 @@
 import { loadWordList, isValidWord } from './wordlist.js';
-import { ScramblergramsGame, TIME_LIMITS } from './game.js';
+import { ScramblergramsGame } from './game.js';
 import { getProfile, saveProfile, hasProfile, COUNTRIES, flagEmoji } from './profile.js';
 import { submitScore, fetchLeaderboard } from './api.js';
+import { createDailyBag, getPuzzleDateString, getDayNumber } from './tiles.js';
 import './elements.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -28,36 +29,78 @@ const shareBtn  = $('share-btn');
 let game          = null;
 let timerSecs     = 0;
 let timerInterval = null;
+let countdownInterval = null;
 
-// Each entry: { letter, tileId, origin }
-// origin = 'unclaimed'  OR  { wordId, wordText }
-let tray         = [];
+let tray          = [];
 let wordIdsInTray = new Set();
+
+const SAVE_KEY   = 'sg-state';
+const TOUR_KEY   = 'sg-tour-seen';
+const STATS_KEY  = 'sg-stats';
+const TOUR_TOTAL = 7;
+
+let fillTimer      = null;
+let scoreSubmitted = false;
+let lbFromResult   = false;
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+function loadStats() {
+  try {
+    return JSON.parse(localStorage.getItem(STATS_KEY)) ?? {};
+  } catch { return {}; }
+}
+
+function saveStats(stats) {
+  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
+function recordGamePlayed(score) {
+  const stats     = loadStats();
+  const today     = getPuzzleDateString();
+  const yesterday = new Date(Date.UTC(...today.split('-').map((v, i) => i === 1 ? v - 1 : +v)));
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yStr = yesterday.toISOString().slice(0, 10);
+
+  const streak = stats.lastPlayed === yStr ? (stats.streak ?? 0) + 1 : 1;
+
+  saveStats({
+    streak,
+    maxStreak:   Math.max(streak, stats.maxStreak ?? 0),
+    gamesPlayed: (stats.gamesPlayed ?? 0) + 1,
+    personalBest: Math.max(score, stats.personalBest ?? 0),
+    lastPlayed:  today,
+  });
+}
+
+function alreadyPlayedToday() {
+  return loadStats().lastPlayed === getPuzzleDateString();
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 async function boot() {
   startBtn.disabled    = true;
-  startBtn.textContent = 'Loading dictionary…';
+  startBtn.textContent = 'Loading…';
 
   try {
     await loadWordList();
   } catch {
-    startBtn.textContent = 'Error loading dictionary — reload page';
+    startBtn.textContent = 'Error loading — reload page';
     return;
   }
 
-  startBtn.disabled    = false;
-  startBtn.textContent = 'Start Game';
+  updateStartScreen();
 
-  // Auto-resume an in-progress game
+  // Auto-resume an in-progress game from today
   const saved = loadSavedState();
-  if (saved?.status === 'playing') {
+  if (saved?.puzzleDate === getPuzzleDateString() && saved?.status === 'playing') {
     restoreGame(saved);
     show('game');
-    startTimer(saved.mode);
+    startTimer();
     render();
     autoFill();
+    return;
   }
 
   startBtn.addEventListener('click', onStartClick);
@@ -67,23 +110,23 @@ async function boot() {
   header.addEventListener('retire-click', () => { $('retire-modal').hidden = false; });
   $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
-  $('play-again-btn').addEventListener('click', () => { clearSavedState(); location.reload(); });
-  $('lb-result-btn').addEventListener('click', () => openLeaderboard(game?.mode ?? 'classical', true));
+
+  $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', true));
 
   // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
-
-  // Word tap → send all letters to tray
   wordBoard.addEventListener('word-tap', e => addWordToTray(e.detail.wordId));
 
-  // Tray events
   trayEl.addEventListener('tray-clear',    onTrayClear);
   trayEl.addEventListener('tray-claim',    onClaim);
   trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
   trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
 
-  // Leaderboard icon on start screen
-  $('lb-icon-btn').addEventListener('click', () => openLeaderboard('classical', false));
+  $('lb-icon-btn').addEventListener('click', () => openLeaderboard('today', false));
+
+  // Stats modal
+  $('stats-btn').addEventListener('click', openStats);
+  $('stats-close').addEventListener('click', () => { $('stats-modal').hidden = true; });
 
   initTour();
 
@@ -104,10 +147,58 @@ async function boot() {
   });
 }
 
+// ── Start screen ──────────────────────────────────────────────────────────────
+
+function updateStartScreen() {
+  const dayNum = getDayNumber();
+  $('day-number').textContent = `Day ${dayNum}`;
+
+  if (alreadyPlayedToday()) {
+    startBtn.hidden = true;
+    $('played-today').hidden = false;
+    startCountdown();
+  } else {
+    startBtn.hidden = false;
+    startBtn.disabled = false;
+    startBtn.textContent = 'Play';
+    $('played-today').hidden = true;
+  }
+}
+
 // ── Screen helper ─────────────────────────────────────────────────────────────
 
 function show(name) {
   for (const [k, el] of Object.entries(screens)) el.hidden = (k !== name);
+}
+
+function startCountdown() {
+  const el = $('next-puzzle-countdown');
+  const tick = () => {
+    const now  = new Date();
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const diff = next - now;
+    const h    = Math.floor(diff / 3600000);
+    const m    = Math.floor((diff % 3600000) / 60000);
+    const s    = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  };
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+// ── Stats modal ───────────────────────────────────────────────────────────────
+
+function openStats() {
+  renderStats();
+  $('stats-modal').hidden = false;
+}
+
+function renderStats() {
+  const s = loadStats();
+  $('stat-streak').textContent       = s.streak       ?? 0;
+  $('stat-max-streak').textContent   = s.maxStreak    ?? 0;
+  $('stat-games-played').textContent = s.gamesPlayed  ?? 0;
+  $('stat-personal-best').textContent = s.personalBest ?? 0;
 }
 
 // ── Game start ────────────────────────────────────────────────────────────────
@@ -117,34 +208,27 @@ function onStartClick() {
 }
 
 function startGame() {
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  game        = new ScramblergramsGame(mode);
-  timerSecs   = TIME_LIMITS[mode] ?? 0;
+  const bag = createDailyBag();
+  game      = new ScramblergramsGame('classical', bag);
+  timerSecs = 0;
   tray          = [];
   wordIdsInTray = new Set();
   scoreSubmitted = false;
 
   show('game');
-  startTimer(mode);
+  startTimer();
   render();
   autoFill();
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
 
-function startTimer(mode) {
+function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
-    timerSecs += (mode === 'classical') ? 1 : -1;
-    if (mode !== 'classical' && timerSecs <= 0) {
-      timerSecs = 0;
-      clearInterval(timerInterval);
-      clearSavedState();
-      endGame();
-    } else {
-      saveState();
-      renderHeader();
-    }
+    timerSecs++;
+    saveState();
+    renderHeader();
   }, 1000);
 }
 
@@ -162,11 +246,7 @@ function addWordToTray(wordId) {
   const word = game.words.find(w => w.id === wordId);
   if (!word) return;
   word.letters.forEach((letter, i) => {
-    tray.push({
-      letter,
-      tileId: `${wordId}:${i}`,
-      origin: { wordId, wordText: word.text },
-    });
+    tray.push({ letter, tileId: `${wordId}:${i}`, origin: { wordId, wordText: word.text } });
   });
   wordIdsInTray.add(wordId);
   render();
@@ -174,7 +254,7 @@ function addWordToTray(wordId) {
 
 function returnTileFromTray(idx) {
   const tile = tray[idx];
-  if (!tile || tile.origin !== 'unclaimed') return; // word-origin tiles can't go back
+  if (!tile || tile.origin !== 'unclaimed') return;
   tray.splice(idx, 1);
   render();
 }
@@ -200,15 +280,10 @@ function onClaim() {
   const hasNew = tray.some(t => t.origin === 'unclaimed');
 
   let result;
-  if (wIds.length === 0) {
-    result = game.claim(word);
-  } else if (wIds.length === 1 && !hasNew) {
-    result = game.anagram(wIds[0], word);
-  } else if (wIds.length === 1) {
-    result = game.extend(wIds[0], word);
-  } else {
-    result = game.recombine(wIds, word);
-  }
+  if (wIds.length === 0)            result = game.claim(word);
+  else if (wIds.length === 1 && !hasNew) result = game.anagram(wIds[0], word);
+  else if (wIds.length === 1)       result = game.extend(wIds[0], word);
+  else                              result = game.recombine(wIds, word);
 
   if (result.ok) {
     const pts = result.word.letters.length - 2;
@@ -218,10 +293,8 @@ function onClaim() {
     render();
     saveState();
     autoFill(150);
-    // Scroll so the newly added word is visible
     requestAnimationFrame(() => {
-      const body = document.getElementById('game-body');
-      body.scrollTop = body.scrollHeight;
+      document.getElementById('game-body').scrollTop = document.getElementById('game-body').scrollHeight;
     });
   } else {
     flash(result.error, 'error');
@@ -250,6 +323,7 @@ function onDone() {
   clearInterval(timerInterval);
   game.declareDone();
   clearSavedState();
+  recordGamePlayed(game.score);
   endGame();
 }
 
@@ -258,13 +332,14 @@ function onDone() {
 function endGame() {
   show('result');
 
+  const dayNum = getDayNumber();
+  $('final-day').textContent = `Day ${dayNum}`;
   $('final-score').innerHTML =
     `<div class="big-score">${game.score}</div><div class="score-lbl">points</div>`;
 
   const m = Math.floor(timerSecs / 60);
   const s = timerSecs % 60;
-  $('final-time').textContent =
-    game.mode === 'classical' ? `${m}:${String(s).padStart(2, '0')}` : '';
+  $('final-time').textContent = `${m}:${String(s).padStart(2, '0')}`;
 
   $('final-words').innerHTML = game.words.length
     ? game.words.map(w =>
@@ -273,6 +348,10 @@ function endGame() {
     : '<p class="no-words">No words were claimed</p>';
 
   $('final-rank').textContent = '';
+
+  // Show updated stats
+  renderStats();
+  $('result-stats').hidden = false;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -285,19 +364,15 @@ function render() {
 }
 
 function renderHeader() {
-  header.update({ score: game.score, seconds: timerSecs, bagCount: game.bag.length, mode: game.mode });
+  header.update({ score: game.score, seconds: timerSecs, bagCount: game.bag.length, mode: 'classical' });
 }
 
 function renderWordBoard() {
-  // Hide words whose letters are currently in the tray
   wordBoard.setWords(game.words.filter(w => !wordIdsInTray.has(w.id)));
 }
 
 function renderRack() {
-  // Hide unclaimed tiles that are in the tray
-  const inTray = new Set(
-    tray.filter(t => t.origin === 'unclaimed').map(t => t.tileId)
-  );
+  const inTray = new Set(tray.filter(t => t.origin === 'unclaimed').map(t => t.tileId));
   tileRack.setTiles(game.unclaimed.filter(t => !inTray.has(t.id)));
 }
 
@@ -314,19 +389,11 @@ function flash(msg, type) {
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
-const SAVE_KEY = 'sg-state';
-const TOUR_KEY = 'sg-tour-seen';
-const TOUR_TOTAL = 8;
-
-let fillTimer = null;
-let scoreSubmitted = false;
-let lbFromResult   = false;
-
 function saveState() {
   if (!game || game.status !== 'playing') return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      mode:         game.mode,
+      puzzleDate:   getPuzzleDateString(),
       bag:          game.bag,
       unclaimed:    game.unclaimed,
       words:        game.words,
@@ -336,7 +403,7 @@ function saveState() {
       tray,
       wordIdsInTray: [...wordIdsInTray],
     }));
-  } catch { /* storage full — silently skip */ }
+  } catch { /* storage full */ }
 }
 
 function loadSavedState() {
@@ -351,7 +418,7 @@ function clearSavedState() {
 }
 
 function restoreGame(saved) {
-  game = new ScramblergramsGame(saved.mode);
+  game = new ScramblergramsGame('classical', []);
   game.bag       = saved.bag;
   game.unclaimed = saved.unclaimed;
   game.words     = saved.words;
@@ -365,13 +432,23 @@ function restoreGame(saved) {
 // ── Share ─────────────────────────────────────────────────────────────────────
 
 async function onShare() {
-  const modeLabel = { classical: 'Classical', bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid' }[game.mode];
+  const dayNum  = getDayNumber();
+  const lengths = {};
+  for (const w of game.words) {
+    lengths[w.letters.length] = (lengths[w.letters.length] ?? 0) + 1;
+  }
+
+  const BLOCK = '█';
+  const NUM_EMOJI = { 4:'4️⃣', 5:'5️⃣', 6:'6️⃣', 7:'7️⃣', 8:'8️⃣', 9:'9️⃣', 10:'🔟' };
+
+  const grid = Object.entries(lengths)
+    .sort(([a], [b]) => a - b)
+    .map(([len, count]) => `${NUM_EMOJI[len] ?? `${len}:`} ${BLOCK.repeat(count)}`)
+    .join('\n');
+
   const m = Math.floor(timerSecs / 60);
   const s = String(timerSecs % 60).padStart(2, '0');
-  const timeStr = game.mode === 'classical' ? ` · ${m}:${s}` : '';
-  const wordLines = game.words.map(w => `${w.text}  +${w.letters.length - 2}`).join('\n');
-
-  const text = `SCRAMBLEGRAMS 🧠\n${game.score} pts · ${modeLabel}${timeStr}\n\n${wordLines}`;
+  const text = `SCRAMBLEGRAMS 🧠\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}`;
 
   try {
     await navigator.clipboard.writeText(text);
@@ -391,7 +468,7 @@ function buildFlagGrid() {
   const grid = $('flag-grid');
   COUNTRIES.forEach(code => {
     const btn = document.createElement('button');
-    btn.className  = 'flag-btn';
+    btn.className   = 'flag-btn';
     btn.textContent = flagEmoji(code);
     btn.dataset.code = code;
     btn.setAttribute('aria-label', code);
@@ -404,8 +481,7 @@ function buildFlagGrid() {
     grid.appendChild(btn);
   });
 
-  // Pre-select: existing profile country, or default to XX (checkered flag)
-  const profile  = getProfile();
+  const profile   = getProfile();
   const preselect = profile?.countryCode ?? 'XX';
   if (profile) $('profile-name').value = profile.playerName;
   _selectedFlag = preselect;
@@ -422,19 +498,19 @@ function onProfileSave() {
   if (!name || !_selectedFlag) return;
   saveProfile(name, _selectedFlag);
   if (lbFromResult) submitCurrentScore();
-  showLeaderboard(lbFromResult ? (game?.mode ?? 'classical') : 'classical');
+  showLeaderboard(lbFromResult ? 'today' : 'today');
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
-function openLeaderboard(mode, fromResult = false) {
+function openLeaderboard(tab, fromResult = false) {
   lbFromResult = fromResult;
   if (!hasProfile()) {
     show('profile');
     return;
   }
   if (fromResult) submitCurrentScore();
-  showLeaderboard(mode);
+  showLeaderboard(tab);
 }
 
 async function submitCurrentScore() {
@@ -447,32 +523,31 @@ async function submitCurrentScore() {
     const res = await submitScore({
       playerName:  profile.playerName,
       countryCode: profile.countryCode,
-      mode:        game.mode,
       score:       game.score,
       words:       game.words.map(w => ({ text: w.text })),
+      puzzleDate:  getPuzzleDateString(),
     });
     const rankEl = $('final-rank');
-    if (rankEl && res.ok) rankEl.textContent = `You ranked #${res.rank} in ${game.mode} mode`;
+    if (rankEl && res.ok) rankEl.textContent = `You ranked #${res.rank} today`;
   } catch {
     scoreSubmitted = false;
   }
 }
 
-function showLeaderboard(mode) {
+function showLeaderboard(tab) {
   show('leaderboard');
-  // Activate the correct tab
   document.querySelectorAll('.lb-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.mode === mode);
+    t.classList.toggle('active', t.dataset.mode === tab);
   });
-  loadLeaderboard(mode);
+  loadLeaderboard(tab);
 }
 
-async function loadLeaderboard(mode) {
+async function loadLeaderboard(tab) {
   const list = $('lb-list');
   list.innerHTML = '<p class="lb-loading">Loading…</p>';
 
   try {
-    const entries = await fetchLeaderboard(mode);
+    const entries = await fetchLeaderboard(tab);
 
     if (!Array.isArray(entries) || entries.length === 0) {
       list.innerHTML = '<p class="lb-empty">No scores yet — be the first!</p>';
@@ -529,15 +604,11 @@ function gotoSlide(n) {
 }
 
 function renderTourSlide() {
-  document.querySelectorAll('.tour-slide').forEach((el, i) => {
-    el.hidden = i !== tourSlide;
-  });
-  document.querySelectorAll('.tour-dot').forEach((el, i) => {
-    el.classList.toggle('active', i === tourSlide);
-  });
+  document.querySelectorAll('.tour-slide').forEach((el, i) => { el.hidden = i !== tourSlide; });
+  document.querySelectorAll('.tour-dot').forEach((el, i) => { el.classList.toggle('active', i === tourSlide); });
   $('tour-prev').classList.toggle('invisible', tourSlide === 0);
-  $('tour-next').hidden = tourSlide === TOUR_TOTAL - 1;
-  $('tour-got-it').hidden = tourSlide !== TOUR_TOTAL - 1;
+  $('tour-next').hidden    = tourSlide === TOUR_TOTAL - 1;
+  $('tour-got-it').hidden  = tourSlide !== TOUR_TOTAL - 1;
 }
 
 // ── Go ────────────────────────────────────────────────────────────────────────
