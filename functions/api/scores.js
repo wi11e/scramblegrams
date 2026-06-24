@@ -75,7 +75,7 @@ export async function onRequestPost({ request, env }) {
     const wordsJson = JSON.stringify(words.map(w => String(w.text).toUpperCase()));
 
     await env.DB.prepare(
-      'INSERT INTO scores (player_name, country_code, score, words, puzzle_date) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO scores (player_name, country_code, score, words, puzzle_date) VALUES (?, ?, ?, ?, ?)'
     ).bind(name, countryCode, score, wordsJson, today).run();
 
     // Today's rank
