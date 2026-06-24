@@ -496,7 +496,7 @@ function restoreGame(saved) {
 async function onShare() {
   const dayNum  = getDayNumber();
   const lengths = {};
-  const lettersUsedNum = 0;
+  let lettersUsedNum = 0;
   for (const w of game.words) {
     lengths[w.letters.length] = (lengths[w.letters.length] ?? 0) + 1;
     lettersUsedNum += w.letters.length;
