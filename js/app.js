@@ -38,7 +38,7 @@ const SAVE_KEY   = 'sg-state';
 const SAVE_ON    =  true
 const TOUR_KEY   = 'sg-tour-seen';
 const STATS_KEY  = 'sg-stats';
-const TOUR_TOTAL = 7;
+const TOUR_TOTAL = 8;
 
 let fillTimer           = null;
 let scoreSubmitted      = false;
@@ -108,7 +108,6 @@ async function boot() {
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
 
   $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', 'result'));
-  $('result-back-btn').addEventListener('click', () => show('start'));
 
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
   wordBoard.addEventListener('word-tap', e => addWordToTray(e.detail.wordId));
@@ -493,7 +492,7 @@ async function onShare() {
 
   const m = Math.floor(timerSecs / 60);
   const s = String(timerSecs % 60).padStart(2, '0');
-  const text = `SCRAMBLEGRAMS 🧠\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}`;
+  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}`;
 
   try {
     await navigator.clipboard.writeText(text);
