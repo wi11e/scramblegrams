@@ -95,19 +95,7 @@ async function boot() {
     return;
   }
 
-  updateStartScreen();
-
-  // Auto-resume an in-progress game from today
-  const saved = loadSavedState();
-  if (saved?.puzzleDate === getPuzzleDateString() && saved?.status === 'playing') {
-    restoreGame(saved);
-    show('game');
-    startTimer();
-    render();
-    autoFill();
-    return;
-  }
-
+  // Register all event listeners before deciding which screen to show
   startBtn.addEventListener('click', onStartClick);
   shareBtn.addEventListener('click', onShare);
   $('theme-btn').addEventListener('click', toggleTheme);
@@ -121,10 +109,8 @@ async function boot() {
   $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', 'result'));
   $('result-back-btn').addEventListener('click', () => show('start'));
 
-  // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
   wordBoard.addEventListener('word-tap', e => addWordToTray(e.detail.wordId));
-
   trayEl.addEventListener('tray-clear',    onTrayClear);
   trayEl.addEventListener('tray-claim',    onClaim);
   trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
@@ -133,20 +119,16 @@ async function boot() {
 
   $('lb-icon-btn').addEventListener('click', () => openLeaderboard('today', 'leaderboard'));
   $('profile-icon-btn').addEventListener('click', () => { profileContext = 'start'; show('profile'); });
-
-  // Stats modal
   $('stats-btn').addEventListener('click', openStats);
   $('stats-close').addEventListener('click', () => { $('stats-modal').hidden = true; });
 
   initTour();
 
-  // Profile screen
   $('profile-back').addEventListener('click', () => profileContext === 'result' ? show('result') : show('start'));
   $('profile-save').addEventListener('click', onProfileSave);
   $('profile-name').addEventListener('input', updateProfileSaveBtn);
   buildFlagGrid();
 
-  // Leaderboard screen
   $('lb-back').addEventListener('click', () => show('start'));
   document.querySelectorAll('.lb-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -155,6 +137,18 @@ async function boot() {
       loadLeaderboard(tab.dataset.mode);
     });
   });
+
+  // Decide initial screen
+  const saved = loadSavedState();
+  if (saved?.puzzleDate === getPuzzleDateString() && saved?.status === 'playing') {
+    restoreGame(saved);
+    show('game');
+    startTimer();
+    render();
+    autoFill();
+  } else {
+    updateStartScreen();
+  }
 }
 
 // ── Start screen ──────────────────────────────────────────────────────────────
@@ -170,7 +164,7 @@ function updateStartScreen() {
   } else {
     startBtn.hidden = false;
     startBtn.disabled = false;
-    startBtn.textContent = 'Play';
+    startBtn.textContent = game?.status === 'playing' ? 'Resume' : 'Play';
     $('played-today').hidden = true;
   }
 }
@@ -235,6 +229,11 @@ function renderStats() {
 // ── Game start ────────────────────────────────────────────────────────────────
 
 function onStartClick() {
+  if (game?.status === 'playing') {
+    show('game');
+    startTimer();
+    return;
+  }
   startGame();
 }
 
