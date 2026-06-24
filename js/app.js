@@ -5,7 +5,7 @@ import { submitScore, fetchLeaderboard, fetchPlayerCount } from './api.js';
 import { loadTodaysBag, getPuzzleDateString, getDayNumber, DAILY_TILE_COUNT } from './tiles.js';
 import './elements.js';
 
-const GAME_NAME = 'Wordcraft';
+const GAME_NAME = 'Scramble';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ async function boot() {
   });
 
   fetchPlayerCount().then(({ count }) => {
-    if (typeof count === 'number') $('player-count').textContent = `${count} players today`;
+    if (typeof count === 'number') $('player-count').textContent = `${count} scramblers today`;
   }).catch(() => {});
 
   // Decide initial screen
