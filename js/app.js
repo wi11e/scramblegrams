@@ -38,6 +38,7 @@ const SAVE_KEY   = 'sg-state';
 const SAVE_ON    =  true
 const TOUR_KEY   = 'sg-tour-seen';
 const STATS_KEY  = 'sg-stats';
+const SHARE_KEY  = 'sg-last-result';
 const TOUR_TOTAL = 8;
 
 let fillTimer           = null;
@@ -124,6 +125,7 @@ async function boot() {
 
   initTour();
 
+  $('start-share-btn').addEventListener('click', onStartShare);
   $('profile-back').addEventListener('click', () => profileContext === 'result' ? show('result') : show('start'));
   $('profile-save').addEventListener('click', onProfileSave);
   $('profile-name').addEventListener('input', updateProfileSaveBtn);
@@ -165,6 +167,12 @@ function updateStartScreen() {
     startBtn.hidden = true;
     $('played-today').hidden = false;
     startCountdown();
+    try {
+      const saved = JSON.parse(localStorage.getItem(SHARE_KEY));
+      $('start-share-btn').hidden = saved?.puzzleDate !== getPuzzleDateString();
+    } catch {
+      $('start-share-btn').hidden = true;
+    }
   } else {
     startBtn.hidden = false;
     startBtn.disabled = false;
@@ -366,6 +374,12 @@ function onDone() {
   game.declareDone();
   clearSavedState();
   recordGamePlayed(game.score);
+  localStorage.setItem(SHARE_KEY, JSON.stringify({
+    puzzleDate: getPuzzleDateString(),
+    score:      game.score,
+    words:      game.words,
+    timerSecs,
+  }));
   endGame();
 }
 
@@ -509,6 +523,43 @@ async function onShare() {
   } catch {
     shareBtn.textContent = 'Copy failed';
     setTimeout(() => shareBtn.textContent = 'Share score', 2000);
+  }
+}
+
+async function onStartShare() {
+  const btn = $('start-share-btn');
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SHARE_KEY)); } catch { return; }
+  if (!saved) return;
+
+  const dayNum  = getDayNumber();
+  const lengths = {};
+  let lettersUsedNum = 0;
+  for (const w of saved.words) {
+    lengths[w.letters.length] = (lengths[w.letters.length] ?? 0) + 1;
+    lettersUsedNum += w.letters.length;
+  }
+
+  const BLOCK = '█';
+  const NUM_EMOJI = { 4:'4️⃣', 5:'5️⃣', 6:'6️⃣', 7:'7️⃣', 8:'8️⃣', 9:'9️⃣', 10:'🔟' };
+  const grid = Object.entries(lengths)
+    .sort(([a], [b]) => a - b)
+    .map(([len, count]) => `${NUM_EMOJI[len] ?? `${len}:`} ${BLOCK.repeat(count)}`)
+    .join('\n');
+
+  const m = Math.floor(saved.timerSecs / 60);
+  const s = String(saved.timerSecs % 60).padStart(2, '0');
+  const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
+  const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
+  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${saved.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Share score', 2000);
+  } catch {
+    btn.textContent = 'Copy failed';
+    setTimeout(() => btn.textContent = 'Share score', 2000);
   }
 }
 
