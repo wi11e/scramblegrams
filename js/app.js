@@ -101,8 +101,9 @@ async function boot() {
   $('theme-btn').addEventListener('click', toggleTheme);
 
   // Game header navigation
-  header.addEventListener('back-click',   () => { clearInterval(timerInterval); show('start'); updateStartScreen(); });
-  header.addEventListener('retire-click', () => { $('retire-modal').hidden = false; });
+  header.addEventListener('back-click',     () => { clearInterval(timerInterval); show('start'); updateStartScreen(); });
+  header.addEventListener('retire-click',   () => { $('retire-modal').hidden = false; });
+  header.addEventListener('howtoplay-click', () => openTour());
   $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
 
@@ -678,7 +679,7 @@ function initTour() {
   $('tour-prev').addEventListener('click', () => gotoSlide(tourSlide - 1));
   $('tour-next').addEventListener('click', () => gotoSlide(tourSlide + 1));
   $('tour-got-it').addEventListener('click', closeTour);
-  $('how-to-play-btn').addEventListener('click', openTour);
+  // how-to-play is now in the game header — wired via howtoplay-click event
 
   if (!localStorage.getItem(TOUR_KEY)) openTour();
 }

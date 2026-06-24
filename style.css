@@ -456,6 +456,19 @@ sg-tray {
 
 /* ── Header retire button ─────────────────────────────────────────────────── */
 
+.header-howto-btn {
+  background: transparent;
+  color: var(--col-3);
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 800;
+  transition: color 80ms;
+  flex-shrink: 0;
+}
+
+.header-howto-btn:hover { color: var(--col-dark); }
+
 .header-finish-btn {
   background: transparent;
   color: var(--col-3);

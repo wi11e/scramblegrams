@@ -20,7 +20,7 @@ class BgTileRack extends HTMLElement {
 
     const label = document.createElement('div');
     label.className = 'rack-label';
-    label.textContent = `Pool  ${tiles.length} / ${cap}`;
+    label.textContent = 'Pool';
     this.appendChild(label);
 
     const row = document.createElement('div');
@@ -214,12 +214,13 @@ class BgGameHeader extends HTMLElement {
         </div>
         <div class="stat">
           <span class="stat-val" data-h="bag">—</span>
-          <span class="stat-lbl">In bag</span>
+          <span class="stat-lbl">more tiles</span>
         </div>
         <div class="stat" data-h="timer-wrap">
           <span class="stat-val" data-h="time">0:00</span>
           <span class="stat-lbl" data-h="time-lbl">Elapsed</span>
         </div>
+        <button class="header-howto-btn" aria-label="How to play">?</button>
         <button class="header-finish-btn" aria-label="Finish game">
           <svg width="16" height="13" viewBox="0 0 16 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M1 6.5L6 11.5L15 1.5"/>
@@ -229,6 +230,9 @@ class BgGameHeader extends HTMLElement {
     `;
     this.querySelector('.header-back-btn').addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('back-click', { bubbles: true }));
+    });
+    this.querySelector('.header-howto-btn').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('howtoplay-click', { bubbles: true }));
     });
     this.querySelector('.header-finish-btn').addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('retire-click', { bubbles: true }));
@@ -288,7 +292,7 @@ class SgTray extends HTMLElement {
     if (this._tiles.length === 0) {
       const hint = document.createElement('span');
       hint.className = 'tray-hint';
-      hint.textContent = 'Tap tiles or words to build';
+      hint.textContent = 'Drag tiles to build words';
       inner.appendChild(hint);
     } else {
       this._tiles.forEach((t, i) => {
