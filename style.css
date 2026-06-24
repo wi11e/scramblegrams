@@ -789,7 +789,7 @@ sg-tray {
 .lb-entry.lb-me { background: var(--col-1); margin: 0 -8px; padding: 10px 8px; border-radius: 6px; }
 
 .lb-rank    { width: 28px; font-size: .85rem; font-weight: 700; color: var(--col-3); flex-shrink: 0; }
-.lb-name    { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14ch; min-width: 0; }
+.lb-name    { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14ch; min-width: 0; }
 .lb-flag    { flex: 1; font-size: 1.3rem; flex-shrink: 0; max-width: 2ch; }
 .lb-score   { font-weight: 800; flex-shrink: 0; margin-left: auto; }
 .lb-perfect { color: var(--col-from-word); font-size: .85rem; margin-left: 3px; }
