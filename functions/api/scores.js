@@ -76,7 +76,7 @@ export async function onRequestPost({ request, env }) {
 
     await env.DB.prepare(
       'INSERT INTO scores (player_name, country_code, score, words, puzzle_date) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(name, countryCode, 'classical', score, wordsJson, today).run();
+    ).bind(name, countryCode, score, wordsJson, today).run();
 
     // Today's rank
     const { rank } = await env.DB.prepare(`
