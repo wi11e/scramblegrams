@@ -5,6 +5,8 @@ import { submitScore, fetchLeaderboard, fetchPlayerCount } from './api.js';
 import { loadTodaysBag, getPuzzleDateString, getDayNumber, DAILY_TILE_COUNT } from './tiles.js';
 import './elements.js';
 
+const GAME_NAME = 'Wordcraft';
+
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const $ = id => document.getElementById(id);
@@ -23,6 +25,14 @@ const trayEl    = $('tray');
 const statusEl  = $('status-msg');
 const startBtn  = $('start-btn');
 const shareBtn  = $('share-btn');
+
+const toBlockLetters = s => [...s.toUpperCase()]
+  .map(c => c >= 'A' && c <= 'Z' ? String.fromCodePoint(0x1F130 + c.charCodeAt(0) - 65) : c)
+  .join('');
+document.title = GAME_NAME;
+document.querySelector('.start-title').textContent = GAME_NAME.toUpperCase();
+document.querySelector('.tour-title').textContent = GAME_NAME;
+document.querySelector('.header-title').textContent = GAME_NAME.toUpperCase();
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -514,7 +524,7 @@ async function onShare() {
   const s = String(timerSecs % 60).padStart(2, '0');
   const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
   const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
-  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
+  const text = `${toBlockLetters(GAME_NAME)}\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
 
   try {
     await navigator.clipboard.writeText(text);
@@ -551,7 +561,7 @@ async function onStartShare() {
   const s = String(saved.timerSecs % 60).padStart(2, '0');
   const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
   const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
-  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${saved.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
+  const text = `${toBlockLetters(GAME_NAME)}\nDay ${dayNum} · ${saved.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
 
   try {
     await navigator.clipboard.writeText(text);

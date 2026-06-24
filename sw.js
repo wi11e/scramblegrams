@@ -1,4 +1,4 @@
-const CACHE = 'sg-v2';
+const CACHE = 'sg-v3';
 
 const PRECACHE = [
   '/',
@@ -31,8 +31,8 @@ self.addEventListener('fetch', e => {
 
   const { pathname } = new URL(e.request.url);
 
-  // Network-first: API calls and puzzle data are always fresh
-  if (NETWORK_FIRST.some(p => pathname.startsWith(p))) {
+  // Network-first: HTML shell, API calls, and puzzle data are always fresh
+  if (pathname === '/' || NETWORK_FIRST.some(p => pathname.startsWith(p))) {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
     );
