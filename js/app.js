@@ -1,8 +1,8 @@
 import { loadWordList, isValidWord } from './wordlist.js';
 import { ScramblergramsGame } from './game.js';
 import { getProfile, saveProfile, hasProfile, COUNTRIES, flagEmoji } from './profile.js';
-import { submitScore, fetchLeaderboard } from './api.js';
-import { loadTodaysBag, getPuzzleDateString, getDayNumber } from './tiles.js';
+import { submitScore, fetchLeaderboard, fetchPlayerCount } from './api.js';
+import { loadTodaysBag, getPuzzleDateString, getDayNumber, DAILY_TILE_COUNT } from './tiles.js';
 import './elements.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -137,6 +137,10 @@ async function boot() {
       loadLeaderboard(tab.dataset.mode);
     });
   });
+
+  fetchPlayerCount().then(({ count }) => {
+    if (typeof count === 'number') $('player-count').textContent = `${count} players today`;
+  }).catch(() => {});
 
   // Decide initial screen
   const saved = loadSavedState();
@@ -478,8 +482,10 @@ function restoreGame(saved) {
 async function onShare() {
   const dayNum  = getDayNumber();
   const lengths = {};
+  const lettersUsedNum = 0;
   for (const w of game.words) {
     lengths[w.letters.length] = (lengths[w.letters.length] ?? 0) + 1;
+    lettersUsedNum += w.letters.length;
   }
 
   const BLOCK = '█';
@@ -492,7 +498,9 @@ async function onShare() {
 
   const m = Math.floor(timerSecs / 60);
   const s = String(timerSecs % 60).padStart(2, '0');
-  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}`;
+  const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
+  const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
+  const text = `🅂🄲🅁🄰🄼🄱🄻🄴🄶🅁🄰🄼🅂\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
 
   try {
     await navigator.clipboard.writeText(text);

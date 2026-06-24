@@ -4,6 +4,8 @@ export const TILE_DISTRIBUTION = {
 };
 
 export const TOTAL_TILES = Object.values(TILE_DISTRIBUTION).reduce((a, b) => a + b, 0); // 144
+export const DAILY_TILE_COUNT = 40;
+export const LAUNCH_DATE = new Date(Date.UTC(2026, 5, 23)); // 2026-06-23 = Day 1
 
 let _uid = 0;
 
@@ -35,9 +37,6 @@ function makeRng(seed) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-
-export const DAILY_TILE_COUNT = 40;
-export const LAUNCH_DATE = new Date(Date.UTC(2026, 5, 23)); // 2026-06-23 = Day 1
 
 export function getPuzzleDate() {
   const now = new Date();

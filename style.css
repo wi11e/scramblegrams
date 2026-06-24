@@ -82,6 +82,12 @@ body {
   color: var(--col-3);
 }
 
+.player-count {
+  font-size: .8rem;
+  color: var(--col-3);
+  text-align: center;
+}
+
 .played-msg {
   font-size: .95rem;
   color: var(--col-3);

@@ -11,3 +11,8 @@ export async function fetchLeaderboard(tab) {
   const res = await fetch(`/api/leaderboard/${tab}`);
   return res.json();
 }
+
+export async function fetchPlayerCount() {
+  const res = await fetch('/api/players/today');
+  return res.json();
+}
