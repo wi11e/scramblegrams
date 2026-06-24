@@ -127,6 +127,7 @@ async function boot() {
   trayEl.addEventListener('tray-claim',    onClaim);
   trayEl.addEventListener('tray-reorder',  e => reorderTray(e.detail));
   trayEl.addEventListener('tray-tile-tap', e => returnTileFromTray(e.detail.idx));
+  tileRack.addEventListener('tile-drag-to-tray', e => addTileToTrayAt(e.detail.tileId, e.detail.insertBefore));
 
   $('lb-icon-btn').addEventListener('click', () => openLeaderboard('today', 'leaderboard'));
   $('profile-icon-btn').addEventListener('click', () => { profileContext = 'start'; show('profile'); });
@@ -267,6 +268,13 @@ function addTileToTray(tileId) {
   const tile = game.unclaimed.find(t => t.id === tileId);
   if (!tile) return;
   tray.push({ letter: tile.letter, tileId: tile.id, origin: 'unclaimed' });
+  render();
+}
+
+function addTileToTrayAt(tileId, insertBefore) {
+  const tile = game.unclaimed.find(t => t.id === tileId);
+  if (!tile) return;
+  tray.splice(insertBefore, 0, { letter: tile.letter, tileId: tile.id, origin: 'unclaimed' });
   render();
 }
 
@@ -600,10 +608,12 @@ async function loadLeaderboard(tab) {
     list.innerHTML = entries.map(e => {
       const isMe  = profile && e.playerName === profile.playerName && e.countryCode === profile.countryCode;
       const medal = medals[e.rank - 1] ?? `${e.rank}`;
+      const hasPlayed = alreadyPlayedToday();
       const star = e.usedAllTiles
         ? `<span class="lb-perfect" title="Used all tiles">★</span>` : '';
-      const wordScore = e.words?.length
-        ? `<div class="lb-words">${e.words.join(' · ')}<span class="lb-words-score">${e.score}${star}</span></div>` : '';
+      const wordScore = (e.words?.length && hasPlayed)
+        ? `<div class="lb-words">${e.words.join(' · ')}<span class="lb-words-score">${e.score}${star}</span></div>`
+        : `<div class="lb-words"><span class="lb-words-score">${e.score}${star}</span></div>`;
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>

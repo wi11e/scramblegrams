@@ -433,7 +433,7 @@ sg-tray {
 
 /* ── Header retire button ─────────────────────────────────────────────────── */
 
-.header-retire-btn {
+.header-finish-btn {
   background: transparent;
   color: var(--col-3);
   padding: 4px 6px;
@@ -442,7 +442,8 @@ sg-tray {
   flex-shrink: 0;
 }
 
-.header-retire-btn:hover { color: var(--col-error); background: rgba(201,65,75,.08); }
+.header-finish-btn:hover { color: var(--col-success); background: rgba(83,141,78,.08); }
+.header-finish-btn.ready { color: var(--col-success); }
 
 /* ── Stats modal ─────────────────────────────────────────────────────────── */
 

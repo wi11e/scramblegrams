@@ -1,4 +1,4 @@
-const CACHE = 'sg-v1';
+const CACHE = 'sg-v2';
 
 const PRECACHE = [
   '/',
@@ -10,13 +10,14 @@ const PRECACHE = [
   '/js/wordlist.js',
 ];
 
-// Pre-cache app shell on install (wordlist cached lazily on first fetch)
+// Always fetch fresh from the network for dynamic content
+const NETWORK_FIRST = ['/api/', '/puzzles.json'];
+
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
 });
 
-// Delete old caches on activate
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -25,9 +26,20 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Cache-first: serve from cache, fall through to network and cache the response
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+
+  const { pathname } = new URL(e.request.url);
+
+  // Network-first: API calls and puzzle data are always fresh
+  if (NETWORK_FIRST.some(p => pathname.startsWith(p))) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Cache-first: app shell
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

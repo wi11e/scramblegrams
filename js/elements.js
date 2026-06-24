@@ -8,8 +8,13 @@ class BgTile extends HTMLElement {
 }
 customElements.define('bg-tile', BgTile);
 
-// bg-tile-rack — unclaimed area; tiles dispatch tile-tap on click
+// bg-tile-rack — unclaimed pool; tiles support tap and drag-to-tray
 class BgTileRack extends HTMLElement {
+  constructor() {
+    super();
+    this._drag = null;
+  }
+
   setTiles(tiles, cap = 10) {
     this.innerHTML = '';
 
@@ -24,7 +29,7 @@ class BgTileRack extends HTMLElement {
     if (tiles.length === 0) {
       const empty = document.createElement('span');
       empty.className = 'rack-empty';
-      empty.textContent = tiles.length === 0 ? 'Draw a tile to begin' : '';
+      empty.textContent = 'Draw a tile to begin';
       row.appendChild(empty);
     } else {
       for (const tile of tiles) {
@@ -33,17 +38,101 @@ class BgTileRack extends HTMLElement {
         el.setAttribute('state', 'unclaimed');
         el.dataset.tileId = tile.id;
         el.classList.add('tappable');
-        el.addEventListener('click', () => {
-          this.dispatchEvent(new CustomEvent('tile-tap', {
-            bubbles: true,
-            detail: { tileId: tile.id, letter: tile.letter },
-          }));
-        });
+        this._addTileDrag(el, tile);
         row.appendChild(el);
       }
     }
 
     this.appendChild(row);
+  }
+
+  _addTileDrag(el, tile) {
+    const THRESHOLD = 6;
+
+    el.addEventListener('pointerdown', (e) => {
+      if (this._drag) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      this._drag = {
+        tileId:  tile.id,
+        letter:  tile.letter,
+        ghost:   null,
+        started: false,
+        startX:  e.clientX,
+        startY:  e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        rect,
+      };
+      el.setPointerCapture(e.pointerId);
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (!this._drag) return;
+      e.preventDefault();
+      const moved = Math.abs(e.clientX - this._drag.startX) > THRESHOLD
+                 || Math.abs(e.clientY - this._drag.startY) > THRESHOLD;
+      if (!moved) return;
+
+      if (!this._drag.started) {
+        this._drag.started = true;
+        el.style.opacity = '0.3';
+        const ghost = document.createElement('div');
+        ghost.className = 'tray-ghost';
+        ghost.setAttribute('letter', this._drag.letter);
+        Object.assign(ghost.style, {
+          position: 'fixed',
+          width:    `${this._drag.rect.width}px`,
+          height:   `${this._drag.rect.height}px`,
+          left:     `${this._drag.rect.left}px`,
+          top:      `${this._drag.rect.top}px`,
+          pointerEvents: 'none',
+          zIndex:   '1000',
+        });
+        document.body.appendChild(ghost);
+        this._drag.ghost = ghost;
+      }
+      this._drag.ghost.style.left = `${e.clientX - this._drag.offsetX}px`;
+      this._drag.ghost.style.top  = `${e.clientY - this._drag.offsetY}px`;
+    });
+
+    const onEnd = (e) => {
+      if (!this._drag) return;
+      const { tileId, letter, ghost, started } = this._drag;
+      this._drag = null;
+      if (ghost) ghost.remove();
+      el.style.opacity = '';
+
+      if (!started) {
+        // Tap — same as before
+        this.dispatchEvent(new CustomEvent('tile-tap', {
+          bubbles: true, detail: { tileId, letter },
+        }));
+        return;
+      }
+
+      // Drag — find drop target in sg-tray
+      const trayEl = document.querySelector('sg-tray');
+      if (!trayEl) return;
+      const tr = trayEl.getBoundingClientRect();
+      if (e.clientX < tr.left || e.clientX > tr.right ||
+          e.clientY < tr.top  || e.clientY > tr.bottom) return;
+
+      // Calculate insertion index using same logic as tray reorder
+      const trayTiles = [...trayEl.querySelectorAll('.tray-tile')];
+      let insertBefore = trayTiles.length;
+      for (let i = 0; i < trayTiles.length; i++) {
+        const r = trayTiles[i].getBoundingClientRect();
+        if (e.clientY < r.top) { insertBefore = i; break; }
+        if (e.clientY <= r.bottom && e.clientX < r.left + r.width / 2) { insertBefore = i; break; }
+      }
+      this.dispatchEvent(new CustomEvent('tile-drag-to-tray', {
+        bubbles: true, detail: { tileId, insertBefore },
+      }));
+    };
+
+    el.addEventListener('pointerup',     onEnd);
+    el.addEventListener('pointercancel', onEnd);
   }
 }
 customElements.define('bg-tile-rack', BgTileRack);
@@ -110,7 +199,7 @@ class BgWordBoard extends HTMLElement {
 }
 customElements.define('bg-word-board', BgWordBoard);
 
-// bg-game-header — score / timer / bag count + retire button
+// bg-game-header — score / timer / bag count + finish button
 class BgGameHeader extends HTMLElement {
   connectedCallback() {
     this.innerHTML = `
@@ -130,15 +219,14 @@ class BgGameHeader extends HTMLElement {
           <span class="stat-val" data-h="time">0:00</span>
           <span class="stat-lbl" data-h="time-lbl">Elapsed</span>
         </div>
-        <button class="header-retire-btn" aria-label="Retire game">
-          <svg width="13" height="15" viewBox="0 0 13 15" fill="currentColor" aria-hidden="true">
-            <rect x="2" y="0" width="1.5" height="15" rx="0.75"/>
-            <path d="M3.5 1.5L12 5L3.5 8.5Z"/>
+        <button class="header-finish-btn" aria-label="Finish game">
+          <svg width="16" height="13" viewBox="0 0 16 13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 6.5L6 11.5L15 1.5"/>
           </svg>
         </button>
       </div>
     `;
-    this.querySelector('.header-retire-btn').addEventListener('click', () => {
+    this.querySelector('.header-finish-btn').addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('retire-click', { bubbles: true }));
     });
   }
@@ -154,6 +242,7 @@ class BgGameHeader extends HTMLElement {
     this.querySelector('[data-h="time"]').textContent     = time;
     this.querySelector('[data-h="time-lbl"]').textContent = mode === 'classical' ? 'Elapsed' : 'Left';
     this.querySelector('[data-h="timer-wrap"]').classList.toggle('urgent', urgent);
+    this.querySelector('.header-finish-btn').classList.toggle('ready', bagCount === 0);
   }
 }
 customElements.define('bg-game-header', BgGameHeader);
