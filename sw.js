@@ -10,8 +10,8 @@ const PRECACHE = [
   '/js/wordlist.js',
 ];
 
-// Always fetch fresh from the network for dynamic content
-const NETWORK_FIRST = ['/api/', '/puzzles.json'];
+// Always fetch fresh from the network — dynamic content and app shell
+const NETWORK_FIRST = ['/api/', '/puzzles.json', '/style.css', '/js/'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
