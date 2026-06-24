@@ -207,6 +207,7 @@ class BgGameHeader extends HTMLElement {
         <span class="header-title">SCRAMBLEGRAMS</span>
       </div>
       <div class="header-stats">
+        <button class="header-back-btn" aria-label="Back to home">←</button>
         <div class="stat">
           <span class="stat-val" data-h="score">0</span>
           <span class="stat-lbl">Score</span>
@@ -226,6 +227,9 @@ class BgGameHeader extends HTMLElement {
         </button>
       </div>
     `;
+    this.querySelector('.header-back-btn').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('back-click', { bubbles: true }));
+    });
     this.querySelector('.header-finish-btn').addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('retire-click', { bubbles: true }));
     });

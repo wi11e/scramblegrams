@@ -112,12 +112,14 @@ async function boot() {
   shareBtn.addEventListener('click', onShare);
   $('theme-btn').addEventListener('click', toggleTheme);
 
-  // Retire modal
+  // Game header navigation
+  header.addEventListener('back-click',   () => { clearInterval(timerInterval); show('start'); updateStartScreen(); });
   header.addEventListener('retire-click', () => { $('retire-modal').hidden = false; });
   $('retire-no').addEventListener('click',  () => { $('retire-modal').hidden = true; });
   $('retire-yes').addEventListener('click', () => { $('retire-modal').hidden = true; onDone(); });
 
   $('lb-result-btn').addEventListener('click', () => openLeaderboard('today', 'result'));
+  $('result-back-btn').addEventListener('click', () => show('start'));
 
   // Tile tap → add to tray
   tileRack.addEventListener('tile-tap', e => addTileToTray(e.detail.tileId));
