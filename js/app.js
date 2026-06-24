@@ -611,15 +611,15 @@ async function loadLeaderboard(tab) {
       const hasPlayed = alreadyPlayedToday();
       const star = e.usedAllTiles
         ? `<span class="lb-perfect" title="Used all tiles">★</span>` : '';
-      const wordScore = (e.words?.length && hasPlayed)
-        ? `<div class="lb-words">${e.words.join(' · ')}<span class="lb-words-score">${e.score}${star}</span></div>`
-        : `<div class="lb-words"><span class="lb-words-score">${e.score}${star}</span></div>`;
+      const words = (e.words?.length && hasPlayed)
+        ? `<div class="lb-words">${e.words.join(' · ')}</div>` : '';
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${e.playerName}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
-          ${wordScore}
+          <span class="lb-score">${e.score}${star}</span>
+          ${words}
         </div>`;
     }).join('');
   } catch {
