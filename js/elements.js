@@ -29,7 +29,6 @@ class BgTileRack extends HTMLElement {
     if (tiles.length === 0) {
       const empty = document.createElement('span');
       empty.className = 'rack-empty';
-      empty.textContent = 'Draw a tile to begin';
       row.appendChild(empty);
     } else {
       for (const tile of tiles) {

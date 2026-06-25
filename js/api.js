@@ -7,8 +7,9 @@ export async function submitScore({ playerName, countryCode, score, words, puzzl
   return res.json();
 }
 
-export async function fetchLeaderboard(tab) {
-  const res = await fetch(`/api/leaderboard/${tab}`);
+export async function fetchLeaderboard(tab, { bust = false } = {}) {
+  const url = bust ? `/api/leaderboard/${tab}?t=${Date.now()}` : `/api/leaderboard/${tab}`;
+  const res = await fetch(url);
   return res.json();
 }
 

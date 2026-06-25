@@ -7,6 +7,13 @@ import './elements.js';
 
 const GAME_NAME = 'Scramble';
 
+// ── Util fns ─────────────────────────────────────────────────────────────────────
+const toBlockLetters = s => [...s.toUpperCase()]
+  .map(c => c >= 'A' && c <= 'Z' ? String.fromCodePoint(0x1F130 + c.charCodeAt(0) - 65) : c)
+  .join('');
+
+const pluralise = (word, count) => count === 1 ? word : `${word}s`;
+
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const $ = id => document.getElementById(id);
@@ -26,9 +33,6 @@ const statusEl  = $('status-msg');
 const startBtn  = $('start-btn');
 const shareBtn  = $('share-btn');
 
-const toBlockLetters = s => [...s.toUpperCase()]
-  .map(c => c >= 'A' && c <= 'Z' ? String.fromCodePoint(0x1F130 + c.charCodeAt(0) - 65) : c)
-  .join('');
 document.title = GAME_NAME;
 document.querySelector('.start-title').textContent = GAME_NAME.toUpperCase();
 document.querySelector('.tour-title').textContent = GAME_NAME;
@@ -151,7 +155,7 @@ async function boot() {
   });
 
   fetchPlayerCount().then(({ count }) => {
-    if (typeof count === 'number') $('player-count').textContent = `${count} scramblers already played`;
+    if (typeof count === 'number') $('player-count').textContent = `${count} ${pluralise(scrambler)} already played`;
   }).catch(() => {});
 
   // Decide initial screen
@@ -627,7 +631,7 @@ async function openLeaderboard(tab, context = 'leaderboard') {
     return;
   }
   if (context === 'result') await submitCurrentScore();
-  showLeaderboard(tab);
+  showLeaderboard(tab, context === 'result');
 }
 
 async function submitCurrentScore() {
@@ -652,20 +656,20 @@ async function submitCurrentScore() {
   }
 }
 
-function showLeaderboard(tab) {
+function showLeaderboard(tab, bust = false) {
   show('leaderboard');
   document.querySelectorAll('.lb-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.mode === tab);
   });
-  loadLeaderboard(tab);
+  loadLeaderboard(tab, bust);
 }
 
-async function loadLeaderboard(tab) {
+async function loadLeaderboard(tab, bust = false) {
   const list = $('lb-list');
   list.innerHTML = '<p class="lb-loading">Loading…</p>';
 
   try {
-    const entries = await fetchLeaderboard(tab);
+    const entries = await fetchLeaderboard(tab, { bust });
 
     if (!Array.isArray(entries) || entries.length === 0) {
       list.innerHTML = '<p class="lb-empty">No scores yet — be the first!</p>';
