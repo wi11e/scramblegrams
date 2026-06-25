@@ -8,10 +8,6 @@ import './elements.js';
 const GAME_NAME = 'Scramble';
 
 // ── Util fns ─────────────────────────────────────────────────────────────────────
-const toBlockLetters = s => [...s.toUpperCase()]
-  .map(c => c >= 'A' && c <= 'Z' ? String.fromCodePoint(0x1F130 + c.charCodeAt(0) - 65) : c)
-  .join('');
-
 const pluralise = (word, count) => count === 1 ? word : `${word}s`;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -528,7 +524,7 @@ async function onShare() {
   const s = String(timerSecs % 60).padStart(2, '0');
   const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
   const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
-  const text = `${toBlockLetters(GAME_NAME)}\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
+  const text = `${GAME_NAME.toUpperCase()}\nDay ${dayNum} · ${game.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
 
   try {
     await navigator.clipboard.writeText(text);
