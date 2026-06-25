@@ -155,7 +155,7 @@ async function boot() {
   });
 
   fetchPlayerCount().then(({ count }) => {
-    if (typeof count === 'number') $('player-count').textContent = `${count} ${pluralise(scrambler)} already played`;
+    if (typeof count === 'number') $('player-count').textContent = `${count} ${pluralise('scrambler', count)} already played`;
   }).catch(() => {});
 
   // Decide initial screen
