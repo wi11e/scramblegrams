@@ -74,7 +74,7 @@ export class ScramblergramsGame {
     if (!next) return { error: 'Those letters aren\'t all in your pool' };
 
     this.unclaimed = next;
-    const w = { id: makeWordId(), letters, text: word };
+    const w = { id: makeWordId(), letters, text: word, chain: { type: 'steps', words: [word] } };
     this.words.push(w);
     this._recalc();
     return { ok: true, word: w };
@@ -97,8 +97,14 @@ export class ScramblergramsGame {
     if (!next) return { error: `Need ${extras.join(', ')} from your pool` };
 
     this.unclaimed = next;
+    const prevText = existing.text;
     existing.letters = letters;
     existing.text = word;
+    if (!existing.chain) {
+      existing.chain = { type: 'steps', words: [prevText, word] };
+    } else if (existing.chain.type === 'steps') {
+      existing.chain.words.push(word);
+    }
     this._recalc();
     return { ok: true, word: existing };
   }
@@ -137,9 +143,10 @@ export class ScramblergramsGame {
     const next = extras.length > 0 ? this._take(extras) : [...this.unclaimed];
     if (!next) return { error: `Need ${extras.join(', ')} from your pool` };
 
+    const sourceChains = sources.map(s => s.chain ?? { type: 'steps', words: [s.text] });
     this.words = this.words.filter(w => !wordIds.includes(w.id));
     this.unclaimed = next;
-    const w = { id: makeWordId(), letters, text: word };
+    const w = { id: makeWordId(), letters, text: word, chain: { type: 'combine', sources: sourceChains, result: word } };
     this.words.push(w);
     this._recalc();
     return { ok: true, word: w };

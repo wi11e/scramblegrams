@@ -29,7 +29,7 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); }
   catch { return Response.json({ error: 'Invalid JSON' }, { status: 400, headers: CORS }); }
 
-  const { playerName, countryCode, score, words, puzzleDate } = body;
+  const { playerName, countryCode, score, words, wordChains, puzzleDate } = body;
 
   // ── Input sanity ──────────────────────────────────────────────────────────
 
@@ -72,11 +72,12 @@ export async function onRequestPost({ request, env }) {
 
     // ── Persist ───────────────────────────────────────────────────────────────
 
-    const wordsJson = JSON.stringify(words.map(w => String(w.text).toUpperCase()));
+    const wordsJson      = JSON.stringify(words.map(w => String(w.text).toUpperCase()));
+    const wordChainsJson = Array.isArray(wordChains) ? JSON.stringify(wordChains) : null;
 
     await env.DB.prepare(
-      'INSERT INTO scores (player_name, country_code, score, words, puzzle_date) VALUES (?, ?, ?, ?, ?)'
-    ).bind(name, countryCode, score, wordsJson, today).run();
+      'INSERT INTO scores (player_name, country_code, score, words, word_chains, puzzle_date) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(name, countryCode, score, wordsJson, wordChainsJson, today).run();
 
     // Today's rank
     const { rank } = await env.DB.prepare(`

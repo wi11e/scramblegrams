@@ -1,8 +1,8 @@
-export async function submitScore({ playerName, countryCode, score, words, puzzleDate }) {
+export async function submitScore({ playerName, countryCode, score, words, wordChains, puzzleDate }) {
   const res = await fetch('/api/scores', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ playerName, countryCode, score, words, puzzleDate }),
+    body:    JSON.stringify({ playerName, countryCode, score, words, wordChains, puzzleDate }),
   });
   return res.json();
 }

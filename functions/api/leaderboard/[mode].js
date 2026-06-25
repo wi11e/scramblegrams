@@ -20,7 +20,7 @@ export async function onRequestGet({ params, env }) {
     if (mode === 'today') {
       const today = todayUTC();
       ({ results } = await env.DB.prepare(`
-        SELECT s.player_name, s.country_code, s.score, s.words
+        SELECT s.player_name, s.country_code, s.score, s.words, s.word_chains
         FROM scores s
         INNER JOIN (
           SELECT player_name, MAX(score) AS best, MIN(created_at) AS first_at
@@ -36,7 +36,7 @@ export async function onRequestGet({ params, env }) {
 
     } else {
       ({ results } = await env.DB.prepare(`
-        SELECT s.player_name, s.country_code, s.score, s.words
+        SELECT s.player_name, s.country_code, s.score, s.words, s.word_chains
         FROM scores s
         INNER JOIN (
           SELECT player_name, MAX(score) AS best, MIN(created_at) AS first_at
@@ -52,7 +52,8 @@ export async function onRequestGet({ params, env }) {
     }
 
     const leaderboard = results.map((row, i) => {
-      const words = (() => { try { return JSON.parse(row.words ?? '[]'); } catch { return []; } })();
+      const words      = (() => { try { return JSON.parse(row.words       ?? '[]');   } catch { return [];   } })();
+      const wordChains = (() => { try { return JSON.parse(row.word_chains ?? 'null'); } catch { return null; } })();
       const usedAllTiles = words.reduce((sum, w) => sum + w.length, 0) === 40;
       return {
         rank:        i + 1,
@@ -60,6 +61,7 @@ export async function onRequestGet({ params, env }) {
         countryCode: row.country_code,
         score:       row.score,
         words,
+        wordChains,
         usedAllTiles,
       };
     });

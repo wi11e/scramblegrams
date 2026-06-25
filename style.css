@@ -676,12 +676,22 @@ sg-tray {
 
 .result-word {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding: 10px 4px;
   border-bottom: 1px solid var(--col-2);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: .06em;
+}
+
+.rw-chain {
+  width: 100%;
+  font-size: .72rem;
+  font-weight: 400;
+  color: var(--col-3);
+  letter-spacing: .03em;
+  padding-top: 3px;
 }
 
 .rw-pts { color: var(--col-success); }
@@ -844,6 +854,29 @@ sg-tray {
   padding-top: 0;
   padding-left: calc(28px + 10px);
 }
+
+.lb-chain-detail {
+  width: 100%;
+  padding-left: calc(28px + 10px);
+}
+
+.lb-chain-detail > summary {
+  font-size: .72rem;
+  color: var(--col-3);
+  letter-spacing: .04em;
+  cursor: pointer;
+  list-style: none;
+  padding: 0;
+}
+
+.lb-chain-detail > summary::-webkit-details-marker { display: none; }
+
+.lb-chain-words .result-word {
+  padding: 6px 4px;
+  font-size: .85rem;
+}
+
+.lb-chain-words .result-word:last-child { border-bottom: none; }
 
 .lb-loading, .lb-empty {
   color: var(--col-3);

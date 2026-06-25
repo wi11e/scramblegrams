@@ -377,6 +377,34 @@ function autoFill(initialDelay = 0) {
   fillTimer = setTimeout(step, initialDelay);
 }
 
+// ── Chain rendering ───────────────────────────────────────────────────────────
+
+function renderChain(chain) {
+  if (!chain) return null;
+  if (chain.type === 'steps') {
+    if (chain.words.length <= 1) return null;
+    return chain.words.join(' → ');
+  }
+  if (chain.type === 'combine') {
+    const parts = chain.sources.map(s => {
+      const isComplex = s.type === 'combine' || (s.type === 'steps' && s.words.length > 1);
+      if (!isComplex) return s.type === 'steps' ? s.words[0] : s.result;
+      return '(' + renderChain(s) + ')';
+    });
+    return parts.join(' + ') + ' → ' + chain.result;
+  }
+  return null;
+}
+
+function resultWordHtml(text, letters, chain) {
+  const chainStr = renderChain(chain);
+  return `<div class="result-word">
+    <span>${text}</span>
+    <span class="rw-pts">+${letters.length - 2}</span>
+    ${chainStr ? `<div class="rw-chain">${chainStr}</div>` : ''}
+  </div>`;
+}
+
 // ── Done ──────────────────────────────────────────────────────────────────────
 
 function onDone() {
@@ -408,9 +436,7 @@ function endGame() {
   $('final-time').textContent = `${m}:${String(s).padStart(2, '0')}`;
 
   $('final-words').innerHTML = game.words.length
-    ? game.words.map(w =>
-        `<div class="result-word"><span>${w.text}</span><span class="rw-pts">+${w.letters.length - 2}</span></div>`
-      ).join('')
+    ? game.words.map(w => resultWordHtml(w.text, w.letters, w.chain)).join('')
     : '<p class="no-words">No words were claimed</p>';
 
   $('final-rank').textContent = '';
@@ -642,6 +668,7 @@ async function submitCurrentScore() {
       countryCode: profile.countryCode,
       score:       game.score,
       words:       game.words.map(w => ({ text: w.text })),
+      wordChains:  game.words.map(w => renderChain(w.chain) ?? null),
       puzzleDate:  getPuzzleDateString(),
     });
     if (!res.ok) scoreSubmitted = false; // allow retry if server rejected
@@ -681,15 +708,31 @@ async function loadLeaderboard(tab, bust = false) {
       const hasPlayed = alreadyPlayedToday();
       const star = e.usedAllTiles
         ? `<span class="lb-perfect" title="Used all tiles">★</span>` : '';
-      const words = (e.words?.length && hasPlayed)
-        ? `<div class="lb-words">${e.words.join(' · ')}</div>` : '';
+      const wordsLine = (e.words?.length && hasPlayed)
+        ? e.words.join(' · ') : null;
+      const hasChains = hasPlayed && e.wordChains != null;
+      const wordsHtml = wordsLine
+        ? hasChains
+          ? `<details class="lb-chain-detail">
+              <summary class="lb-words">${wordsLine}</summary>
+              <div class="lb-chain-words">${e.words.map((w, i) => {
+                const chainStr = e.wordChains[i];
+                const len = w.length;
+                return `<div class="result-word">
+                  <span>${chainStr ?? w}</span>
+                  <span class="rw-pts">+${len - 2}</span>
+                </div>`;
+              }).join('')}</div>
+            </details>`
+          : `<div class="lb-words">${wordsLine}</div>`
+        : '';
       return `
         <div class="lb-entry${isMe ? ' lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${e.playerName}</span>
           <span class="lb-flag">${flagEmoji(e.countryCode)}</span>
           <span class="lb-score">${e.score}${star}</span>
-          ${words}
+          ${wordsHtml}
         </div>`;
     }).join('');
   } catch {
