@@ -242,10 +242,13 @@ function openStats() {
 
 function renderStats() {
   const s = loadStats();
-  $('stat-streak').textContent       = s.streak       ?? 0;
-  $('stat-max-streak').textContent   = s.maxStreak    ?? 0;
-  $('stat-games-played').textContent = s.gamesPlayed  ?? 0;
-  $('stat-personal-best').textContent = s.personalBest ?? 0;
+  $('stat-streak').textContent              = s.streak       ?? 0;
+  $('stat-max-streak').textContent          = s.maxStreak    ?? 0;
+  $('stat-games-played').textContent        = s.gamesPlayed  ?? 0;
+  $('stat-personal-best').textContent       = s.personalBest ?? 0;
+  $('result-stat-streak').textContent       = s.streak       ?? 0;
+  $('result-stat-games-played').textContent = s.gamesPlayed  ?? 0;
+  $('result-stat-personal-best').textContent = s.personalBest ?? 0;
 }
 
 // ── Game start ────────────────────────────────────────────────────────────────
