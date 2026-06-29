@@ -590,7 +590,7 @@ async function onStartShare() {
   const s = String(saved.timerSecs % 60).padStart(2, '0');
   const tilesRemaining = DAILY_TILE_COUNT - lettersUsedNum;
   const lettersMessage = `${tilesRemaining} tiles remaining ${tilesRemaining === 0 ? '🌟' : ''}`;
-  const text = `${toBlockLetters(GAME_NAME)}\nDay ${dayNum} · ${saved.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
+  const text = `${GAME_NAME.toUpperCase()}\nDay ${dayNum} · ${saved.score} pts · ${m}:${s}\n\n${grid}\n${lettersMessage}`;
 
   try {
     await navigator.clipboard.writeText(text);
